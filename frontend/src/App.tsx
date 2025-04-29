@@ -2,11 +2,12 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
-import EmployeeDashboard from './pages/EmployeeDashboard';
+import EmployeeDashboard from './pages/UserDashboard';
 import LocationSettings from './pages/LocationSettings';
 import AccountCreation from './pages/AccountCreation';
 import ScheduleSettings from './pages/ScheduleSettings';
 import { useAuth } from './hooks/useAuth';
+import UserDashboard from './pages/UserDashboard'; // Pastikan path ini benar
 
 function ProtectedRoute({ children, allowedRole }: { children: React.ReactNode; allowedRole: string }) {
   const { user, loading } = useAuth();
@@ -36,9 +37,9 @@ function App() {
           }
         />
         <Route
-          path="/employee"
+          path="/user"
           element={
-            <ProtectedRoute allowedRole="employee">
+            <ProtectedRoute allowedRole="user"> {/* Ubah dari "employee" menjadi "user" */}
               <EmployeeDashboard />
             </ProtectedRoute>
           }

@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { UserPlus, User, Lock, BadgeCheck, AlertCircle } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
-import { User as UserType } from '../types';
 
 export default function AccountCreation() {
   const [newUser, setNewUser] = useState({
     username: '',
     password: '',
     full_name: '',
-    role: 'employee' as const,
+    role: 'user',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -21,35 +20,19 @@ export default function AccountCreation() {
     setSuccess(false);
 
     try {
-      if (!newUser.username || !newUser.password || !newUser.full_name) {
-        throw new Error('Semua field harus diisi');
+      const response = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Gagal membuat akun');
       }
 
-      if (/\s/.test(newUser.username) || /\s/.test(newUser.password)) {
-        throw new Error('Username dan password tidak boleh mengandung spasi');
-      }
-
-      if (newUser.password.length < 6) {
-        throw new Error('Password minimal 6 karakter');
-      }
-
-      const storedUsers = localStorage.getItem('users');
-      const existingUsers = storedUsers ? JSON.parse(storedUsers) : [];
-
-      if (existingUsers.some((user: UserType) => user.username === newUser.username)) {
-        throw new Error('Username sudah digunakan');
-      }
-
-      const newUserWithId = {
-        ...newUser,
-        id: Date.now().toString(),
-        created_at: new Date().toISOString(),
-      };
-
-      const updatedUsers = [...existingUsers, newUserWithId];
-      localStorage.setItem('users', JSON.stringify(updatedUsers));
-
-      setNewUser({ username: '', password: '', full_name: '', role: 'employee' });
+      setNewUser({ username: '', password: '', full_name: '', role: 'user' });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
@@ -125,6 +108,21 @@ export default function AccountCreation() {
                   </div>
                 </div>
                 <p className="mt-1 text-sm text-gray-500">Username tidak boleh mengandung spasi</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Role
+                </label>
+                <select
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                  className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                >
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                </select>
               </div>
 
               <div>

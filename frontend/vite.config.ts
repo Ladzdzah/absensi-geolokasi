@@ -7,4 +7,10 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
+  define: {
+    'process.env.REACT_ROUTER_FUTURE': JSON.stringify({
+      v7_startTransition: true,
+      v7_relativeSplatPath: true,
+    }),
+  },
 });
