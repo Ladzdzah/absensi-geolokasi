@@ -300,7 +300,7 @@ export default function EmployeeDashboard() {
           <div className="mt-4"> {/* Tambahkan margin atas untuk memberikan jarak */}
             <AttendanceButtons
               canCheckIn={canCheckIn}
-              canCheckOut={canCheckOut}
+              canCheckOut={!!canCheckOut}
               handleCheckIn={handleCheckIn}
               handleCheckOut={handleCheckOut}
               loading={loading}
