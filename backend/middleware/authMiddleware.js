@@ -1,10 +1,8 @@
 const jwt = require("jsonwebtoken");
 
-const 
-verifyToken = (req, res, next) => {
+const verifyToken = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    
     if (!authHeader) {
       return res.status(401).json({ error: "Token tidak ditemukan" });
     }
@@ -30,4 +28,4 @@ const isAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { verifyToken, isAdmin };
+module.exports = { verifyToken, isAdmin };

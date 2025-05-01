@@ -33,7 +33,24 @@ export default function ScheduleSettings() {
         throw new Error('Waktu selesai check-out harus lebih besar dari waktu mulai');
       }
 
-      localStorage.setItem('attendanceSchedule', JSON.stringify(scheduleSettings));
+      const response = await fetch('http://localhost:5000/api/admin/attendance-schedule', {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json', 
+          Authorization: `Bearer ${localStorage.getItem('authToken')}` 
+        },
+        body: JSON.stringify({
+          check_in_start: scheduleSettings.checkIn.start,
+          check_in_end: scheduleSettings.checkIn.end,
+          check_out_start: scheduleSettings.checkOut.start,
+          check_out_end: scheduleSettings.checkOut.end,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Gagal memperbarui jadwal absensi');
+      }
+
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
@@ -44,10 +61,31 @@ export default function ScheduleSettings() {
   };
 
   useEffect(() => {
-    const savedSettings = localStorage.getItem('attendanceSchedule');
-    if (savedSettings) {
-      setScheduleSettings(JSON.parse(savedSettings));
-    }
+    const fetchSchedule = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/admin/attendance-schedule', {
+          method: 'GET',
+          headers: { 
+            'Content-Type': 'application/json', 
+            Authorization: `Bearer ${localStorage.getItem('authToken')}` 
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Gagal mengambil jadwal absensi');
+        }
+
+        const data = await response.json();
+        setScheduleSettings({
+          checkIn: { start: data.check_in_start, end: data.check_in_end },
+          checkOut: { start: data.check_out_start, end: data.check_out_end },
+        });
+      } catch (err: any) {
+        setError(err.message);
+      }
+    };
+
+    fetchSchedule();
   }, []);
 
   return (
@@ -61,7 +99,7 @@ export default function ScheduleSettings() {
             </div>
             <div className="ml-3">
               <p className="text-sm text-gray-300">
-                Atur jadwal absensi untuk check-in dan check-out pegawai. Pastikan rentang waktu sudah sesuai dengan kebijakan perusahaan.
+                Atur jadwal absensi untuk absen masuk dan keluar pegawai. Pastikan rentang waktu sudah sesuai dengan kebijakan perusahaan.
               </p>
             </div>
           </div>
@@ -82,7 +120,7 @@ export default function ScheduleSettings() {
                 <div className="bg-gray-700 p-6 rounded-lg border border-gray-600">
                   <div className="flex items-center mb-4">
                     <Clock className="w-5 h-5 text-blue-400 mr-2" />
-                    <h3 className="text-lg font-medium text-white">Jadwal Check-in</h3>
+                    <h3 className="text-lg font-medium text-white">Jadwal absen masuk</h3>
                   </div>
                   <div className="space-y-4">
                     <div>
@@ -124,7 +162,7 @@ export default function ScheduleSettings() {
                 <div className="bg-gray-700 p-6 rounded-lg border border-gray-600">
                   <div className="flex items-center mb-4">
                     <Clock className="w-5 h-5 text-blue-400 mr-2" />
-                    <h3 className="text-lg font-medium text-white">Jadwal Check-out</h3>
+                    <h3 className="text-lg font-medium text-white">Jadwal absen keluar</h3>
                   </div>
                   <div className="space-y-4">
                     <div>
@@ -183,7 +221,7 @@ export default function ScheduleSettings() {
                       <Save className="h-5 w-5 text-green-400" />
                     </div>
                     <div className="ml-3">
-                      <p className="text-sm text-green-300">{success}</p>
+                      <p className="text-sm text-green-300">{success} Berhasil menetapkan waktu absen</p>
                     </div>
                   </div>
                 </div>
@@ -205,4 +243,4 @@ export default function ScheduleSettings() {
       </div>
     </AdminLayout>
   );
-} 
+}

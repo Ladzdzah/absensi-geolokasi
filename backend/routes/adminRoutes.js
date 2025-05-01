@@ -7,6 +7,16 @@ const {
   getOfficeLocation,
   updateOfficeLocation,
 } = require("../controllers/officeLocationController");
+const {
+  getAttendanceSchedule,
+  updateAttendanceSchedule,
+} = require("../controllers/attendanceScheduleController");
+const {
+  getAttendanceByUser,
+  createCheckIn,
+  createCheckOut,
+} = require("../controllers/attendanceController");
+
 
 // Get all users
 router.get("/users", verifyToken, isAdmin, async (req, res) => {
@@ -57,5 +67,20 @@ router.get("/office-location", verifyToken, getOfficeLocation);
 
 // Endpoint untuk memperbarui lokasi kantor
 router.put("/office-location", verifyToken, isAdmin, updateOfficeLocation);
+
+// Endpoint untuk mendapatkan jadwal absensi
+router.get("/attendance-schedule", verifyToken, getAttendanceSchedule);
+
+// Endpoint untuk memperbarui jadwal absensi
+router.put("/attendance-schedule", verifyToken, isAdmin, updateAttendanceSchedule);
+
+// Endpoint untuk mendapatkan data absensi berdasarkan user_id
+router.get("/attendance", verifyToken, getAttendanceByUser);
+
+// Endpoint untuk absensi masuk
+router.post("/attendance/check-in", verifyToken, createCheckIn);
+
+// Endpoint untuk absensi keluar
+router.post("/attendance/check-out", verifyToken, createCheckOut);
 
 module.exports = router;

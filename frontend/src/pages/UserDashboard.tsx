@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Attendance } from '../types';
-import { MapPin, Clock, LogOut, School, CheckCircle, XCircle } from 'lucide-react';
+import { Clock, LogOut, School, CheckCircle, XCircle, History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Circle, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import iconRetina from 'leaflet/dist/images/marker-icon-2x.png';
 import 'leaflet/dist/leaflet.css';
+import UserLayout from '../components/UserLayout'; // Import UserLayout
+import LocationMap from '../components/LocationMap';
+import LocationStatus from '../components/LocationStatus';
+import AttendanceButtons from '../components/AttendanceButtons';
+import TodayStatus from '../components/TodayStatus';
 
 // Fix for default marker icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -54,44 +58,57 @@ export default function EmployeeDashboard() {
   const [currentLocation, setCurrentLocation] = useState<GeolocationPosition | null>(null);
   const [note, setNote] = useState('');
   const [officeLocation, setOfficeLocation] = useState({ lat: 0, lng: 0, radius: 0 });
+  const [attendanceSchedule, setAttendanceSchedule] = useState({
+    checkIn: { start: '', end: '' },
+    checkOut: { start: '', end: '' },
+  });
+  const [currentTime, setCurrentTime] = useState(new Date());
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchAttendance();
     fetchOfficeLocation(); // Ambil data lokasi kantor dari backend
     getCurrentLocation(); // Ambil lokasi perangkat pengguna
+    fetchAttendanceSchedule(); // Ambil jadwal absensi dari backend
   }, []);
 
-  async function fetchAttendance() {
-    if (!user) return;
-    
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000); // Perbarui setiap 1 detik
+
+    return () => clearInterval(interval); // Bersihkan interval saat komponen di-unmount
+  }, []);
+
+  const fetchAttendance = async () => {
     try {
-      // Get attendance from localStorage
-      const storedAttendance = localStorage.getItem('attendance');
-      const allAttendance = storedAttendance ? JSON.parse(storedAttendance) : [];
-      
-      // Filter attendance for current user
-      const userAttendance = allAttendance.filter((a: Attendance) => a.user_id === user.id);
-      
-      // Sort by check-in time (newest first)
-      userAttendance.sort((a: Attendance, b: Attendance) => 
-        new Date(b.check_in_time).getTime() - new Date(a.check_in_time).getTime()
-      );
-      
-      setAttendance(userAttendance);
+      const response = await fetch("http://localhost:5000/api/admin/attendance", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Gagal mengambil data absensi");
+      }
+
+      const data = await response.json();
+      setAttendance(data); // Simpan data ke state
     } catch (error: any) {
       setError(error.message);
     }
-  }
+  };
 
   function getCurrentLocation() {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => setCurrentLocation(position),
-        (error) => setError('Error getting location: ' + error.message)
+        (error) => setError('Error mendapatkan lokasi: ' + error.message)
       );
     } else {
-      setError('Geolocation is not supported by your browser');
+      setError('Geolocation tidak didukung oleh browser Anda');
     }
   }
 
@@ -116,19 +133,44 @@ export default function EmployeeDashboard() {
     }
   };
 
+  const fetchAttendanceSchedule = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/admin/attendance-schedule', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Gagal mengambil jadwal absensi');
+      }
+
+      const data = await response.json();
+      setAttendanceSchedule({
+        checkIn: { start: data.check_in_start, end: data.check_in_end },
+        checkOut: { start: data.check_out_start, end: data.check_out_end },
+      });
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
   // Add function to check if user is within office radius
+
   const isWithinOfficeRadius = () => {
     if (!currentLocation) return false;
-    
+
     const userLat = currentLocation.coords.latitude;
     const userLng = currentLocation.coords.longitude;
-    
-    // Calculate distance using Haversine formula
-    const R = 6371e3; // Earth's radius in meters
+
+    // Menghitung jarak menggunakan rumus Haversine
+    const R = 6371e3; // Radius bumi dalam meter
     const φ1 = (userLat * Math.PI) / 180;
-    const φ2 = (OFFICE_LOCATION.lat * Math.PI) / 180;
-    const Δφ = ((OFFICE_LOCATION.lat - userLat) * Math.PI) / 180;
-    const Δλ = ((OFFICE_LOCATION.lng - userLng) * Math.PI) / 180;
+    const φ2 = (officeLocation.lat * Math.PI) / 180;
+    const Δφ = ((officeLocation.lat - userLat) * Math.PI) / 180;
+    const Δλ = ((officeLocation.lng - userLng) * Math.PI) / 180;
 
     const a =
       Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
@@ -136,112 +178,86 @@ export default function EmployeeDashboard() {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distance = R * c;
 
-    return distance <= OFFICE_LOCATION.radius;
+    return distance <= officeLocation.radius;
+  };
+
+  const isWithinCheckInTime = () => {
+    const now = new Date();
+    const currentTime = now.toLocaleTimeString('en-US', { hour12: false });
+    return (
+      currentTime >= attendanceSchedule.checkIn.start &&
+      currentTime <= attendanceSchedule.checkIn.end
+    );
+  };
+
+  const isWithinCheckOutTime = () => {
+    const now = new Date();
+    const currentTime = now.toLocaleTimeString('en-US', { hour12: false });
+    return (
+      currentTime >= attendanceSchedule.checkOut.start &&
+      currentTime <= attendanceSchedule.checkOut.end
+    );
   };
 
   // Modify handleCheckIn to include location validation
-  async function handleCheckIn() {
-    if (!user || !currentLocation) return;
-    
-    if (!isWithinOfficeRadius()) {
-      setError('Anda harus berada di area kantor untuk melakukan absensi');
+  const handleCheckIn = async () => {
+    if (!currentLocation) {
+      setError("Lokasi tidak ditemukan");
       return;
     }
-    
-    setLoading(true);
-    setError('');
-
-    const now = new Date();
-    const currentTime = now.toLocaleTimeString('en-US', { hour12: false });
-    
-    // Check if current time is within check-in window
-    if (currentTime < ATTENDANCE_RULES.checkIn.start || currentTime > ATTENDANCE_RULES.checkIn.end) {
-      setError(`Waktu absen masuk hanya diperbolehkan antara ${ATTENDANCE_RULES.checkIn.start} - ${ATTENDANCE_RULES.checkIn.end} WIB`);
-      setLoading(false);
-      return;
-    }
-
-    const status = currentTime > ATTENDANCE_RULES.checkIn.end ? 'late' : 'present';
-
+  
     try {
-      // Get existing attendance records
-      const storedAttendance = localStorage.getItem('attendance');
-      const existingAttendance = storedAttendance ? JSON.parse(storedAttendance) : [];
-      
-      // Create new attendance record
-      const newAttendance = {
-        id: Date.now().toString(),
-        user_id: user.id,
-        user: user, // Include user data for easier display
-        check_in_time: now.toISOString(),
-        check_out_time: null,
-        latitude: currentLocation.coords.latitude,
-        longitude: currentLocation.coords.longitude,
-        status,
-        note,
-        created_at: now.toISOString()
-      };
-      
-      // Add to existing records
-      const updatedAttendance = [...existingAttendance, newAttendance];
-      
-      // Save to localStorage
-      localStorage.setItem('attendance', JSON.stringify(updatedAttendance));
-
-      fetchAttendance();
-      setNote('');
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleCheckOut() {
-    if (!user || !currentLocation) return;
-    
-    const now = new Date();
-    const currentTime = now.toLocaleTimeString('en-US', { hour12: false });
-    
-    // Check if current time is within check-out window
-    if (currentTime < ATTENDANCE_RULES.checkOut.start || currentTime > ATTENDANCE_RULES.checkOut.end) {
-      setError(`Waktu absen keluar hanya diperbolehkan antara ${ATTENDANCE_RULES.checkOut.start} - ${ATTENDANCE_RULES.checkOut.end} WIB`);
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    try {
-      // Get existing attendance records
-      const storedAttendance = localStorage.getItem('attendance');
-      const existingAttendance = storedAttendance ? JSON.parse(storedAttendance) : [];
-      
-      // Find the most recent check-in record for the user that doesn't have a check-out time
-      const recordIndex = existingAttendance.findIndex((record: Attendance) => 
-        record.user_id === user.id && !record.check_out_time
-      );
-      
-      if (recordIndex === -1) {
-        throw new Error('No active check-in found');
+      const response = await fetch("http://localhost:5000/api/admin/attendance/check-in", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+        body: JSON.stringify({
+          latitude: currentLocation.coords.latitude,
+          longitude: currentLocation.coords.longitude,
+          status: "present", // Atur status sesuai logika
+        }),
+      });
+  
+      if (!response.ok) {
+        throw new Error("Gagal melakukan absensi masuk");
       }
-      
-      // Update record with check-out time
-      existingAttendance[recordIndex] = {
-        ...existingAttendance[recordIndex],
-        check_out_time: new Date().toISOString()
-      };
-      
-      // Save back to localStorage
-      localStorage.setItem('attendance', JSON.stringify(existingAttendance));
-
-      fetchAttendance();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+  
+      fetchAttendance(); // Perbarui data absensi
+    } catch (error: any) {
+      setError(error.message);
     }
-  }
+  };
+
+  const handleCheckOut = async () => {
+    if (!currentLocation) {
+      setError("Lokasi tidak ditemukan");
+      return;
+    }
+  
+    try {
+      const response = await fetch("http://localhost:5000/api/admin/attendance/check-out", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+        body: JSON.stringify({
+          latitude: currentLocation.coords.latitude,
+          longitude: currentLocation.coords.longitude,
+        }),
+      });
+  
+      if (!response.ok) {
+        throw new Error("Gagal melakukan absensi keluar");
+      }
+  
+      fetchAttendance(); // Perbarui data absensi
+    } catch (error: any) {
+      setError(error.message);
+    }
+  };
 
   async function handleLogout() {
     try {
@@ -259,299 +275,57 @@ export default function EmployeeDashboard() {
     attendance.length > 0 && attendance[0].check_in_time && !attendance[0].check_out_time;
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      <nav className="bg-gray-800 text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex items-center justify-between">
-            {/* Logo and Title */}
-            <div className="flex items-center space-x-3">
-              <img 
-                src="/images/logo-smk.png" 
-                alt="Logo SMK" 
-                className="h-11 w-auto"
-                onError={(e) => {
-                  const imgElement = e.currentTarget as HTMLImageElement;
-                  imgElement.style.display = 'none';
-                }}
-              />
-              <span className="text-xl font-bold text-gray-100">
-                ABSENSI PEGAWAI
-              </span>
-            </div>
+    <UserLayout>
+      {error && (
+        <div className="bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-xl mb-4">
+          {error}
+        </div>
+      )}
 
-            {/* Logout Button */}
-            <button
-              onClick={handleLogout}
-              className="flex items-center space-x-2 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg transition duration-200"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Logout</span>
-            </button>
+      {/* Lokasi Anda Saat Ini */}
+      <div className="bg-gray-800 rounded-xl shadow-md overflow-hidden border border-gray-700 mb-8">
+        <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4">
+          <h2 className="text-xl font-semibold text-white flex items-center">
+            <Clock className="w-6 h-6 mr-2" />
+            Lokasi Anda Saat Ini
+          </h2>
+        </div>
+        <div className="p-6">
+          <LocationMap currentLocation={currentLocation} />
+          <LocationStatus
+            currentLocation={currentLocation}
+            isWithinOfficeRadius={isWithinOfficeRadius}
+            currentTime={currentTime}
+          />
+          <div className="mt-4"> {/* Tambahkan margin atas untuk memberikan jarak */}
+            <AttendanceButtons
+              canCheckIn={canCheckIn}
+              canCheckOut={canCheckOut}
+              handleCheckIn={handleCheckIn}
+              handleCheckOut={handleCheckOut}
+              loading={loading}
+              isWithinOfficeRadius={isWithinOfficeRadius}
+              isWithinCheckInTime={isWithinCheckInTime}
+              isWithinCheckOutTime={isWithinCheckOutTime}
+              currentLocation={currentLocation}
+            />
           </div>
         </div>
-      </nav>
+      </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {error && (
-          <div className="bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-xl mb-4">
-            {error}
-          </div>
-        )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-          <div className="bg-gray-800 rounded-xl shadow-md overflow-hidden border border-gray-700">
-            <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4">
-              <h2 className="text-xl font-semibold text-white flex items-center">
-                <Clock className="w-6 h-6 mr-2" />
-                Absensi Masuk/Keluar
-              </h2>
-            </div>
-            <div className="p-6">
-              {/* Current Location Map */}
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-gray-300 mb-2">Lokasi Anda Saat Ini</h3>
-                <div className="h-[300px] rounded-lg overflow-hidden border border-gray-600">
-                  {officeLocation.lat !== 0 && officeLocation.lng !== 0 ? (
-                    <MapContainer
-                      center={[officeLocation.lat, officeLocation.lng]}
-                      zoom={16}
-                      style={{ height: '100%', width: '100%' }}
-                      scrollWheelZoom={false}
-                    >
-                      <TileLayer
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                      />
-                      <Marker position={[officeLocation.lat, officeLocation.lng]} icon={customIcon}>
-                        <Popup>
-                          <div>
-                            <h3>Lokasi Kantor</h3>
-                            <p>Radius: {officeLocation.radius} meter</p>
-                          </div>
-                        </Popup>
-                      </Marker>
-                      <Circle
-                        center={[officeLocation.lat, officeLocation.lng]}
-                        radius={officeLocation.radius}
-                        pathOptions={{ color: 'blue', fillColor: 'blue', fillOpacity: 0.2 }}
-                      />
-                    </MapContainer>
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-gray-400">
-                      Lokasi kantor belum diatur.
-                    </div>
-                  )}
-                </div>
-                {/* Location Status */}
-                <div className="mt-4 space-y-2">
-                  <div className="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg border border-gray-600">
-                    <div className="flex items-center text-gray-300">
-                      <MapPin className="w-5 h-5 mr-2" />
-                      <span className="text-sm">
-                        {currentLocation 
-                          ? isWithinOfficeRadius()
-                            ? "Anda berada di dalam area kantor"
-                            : "Anda berada di luar area kantor"
-                          : "Mendeteksi lokasi..."}
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <Clock className="w-5 h-5 mr-2 text-blue-400" />
-                      <span className="text-lg font-semibold text-gray-200">
-                        {new Date().toLocaleTimeString('id-ID')}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-sm text-gray-400">
-                    <span className="inline-block w-3 h-3 rounded-full bg-blue-500 mr-2 opacity-20"></span>
-                    Area absensi kantor (radius {OFFICE_LOCATION.radius}m)
-                  </div>
-                </div>
-              </div>
-
-              {/* Check In/Out buttons */}
-              <div className="space-y-4">
-                {canCheckIn && (
-                  <button
-                    onClick={handleCheckIn}
-                    disabled={loading || !currentLocation || !isWithinOfficeRadius()}
-                    className={`w-full py-3 px-4 rounded-lg flex items-center justify-center transition duration-200 ${
-                      !currentLocation || !isWithinOfficeRadius()
-                        ? 'bg-gray-600 cursor-not-allowed'
-                        : 'bg-green-600 hover:bg-green-700'
-                    } text-white`}
-                  >
-                    <CheckCircle className="w-5 h-5 mr-2" />
-                    {loading ? 'Memproses...' : 'Absen Masuk'}
-                  </button>
-                )}
-
-                {canCheckOut && (
-                  <button
-                    onClick={handleCheckOut}
-                    disabled={loading}
-                    className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-200 flex items-center justify-center"
-                  >
-                    <XCircle className="w-5 h-5 mr-2" />
-                    {loading ? 'Memproses...' : 'Absen Keluar'}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gray-800 rounded-xl shadow-md overflow-hidden border border-gray-700">
-            <div className="bg-gradient-to-r from-indigo-900 to-indigo-800 px-6 py-4">
-              <h2 className="text-xl font-semibold text-white flex items-center">
-                <Clock className="w-6 h-6 mr-2" />
-                Status Hari Ini
-              </h2>
-            </div>
-            <div className="p-6">
-              {attendance[0] ? (
-                <div className="space-y-6">
-                  {/* Status Badge */}
-                  <div className="flex justify-center">
-                    <span
-                      className={`px-6 py-2 rounded-full text-base font-semibold flex items-center ${
-                        attendance[0].status === 'present'
-                          ? 'bg-green-900/50 text-green-300 border border-green-700'
-                          : 'bg-yellow-900/50 text-yellow-300 border border-yellow-700'
-                      }`}
-                    >
-                      {attendance[0].status === 'present' ? (
-                        <>
-                          <CheckCircle className="w-5 h-5 mr-2" />
-                          Tepat Waktu
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="w-5 h-5 mr-2" />
-                          Terlambat
-                        </>
-                      )}
-                    </span>
-                  </div>
-
-                  {/* Time Details */}
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Check In Time */}
-                    <div className="bg-gray-700/50 p-4 rounded-lg border border-gray-600">
-                      <div className="text-center">
-                        <p className="text-sm text-gray-400 mb-1">Waktu Masuk</p>
-                        <div className="flex items-center justify-center space-x-2">
-                          <CheckCircle className="w-4 h-4 text-green-400" />
-                          <span className="text-lg font-semibold text-gray-200">
-                            {new Date(attendance[0].check_in_time).toLocaleTimeString('id-ID', {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Check Out Time */}
-                    <div className="bg-gray-700/50 p-4 rounded-lg border border-gray-600">
-                      <div className="text-center">
-                        <p className="text-sm text-gray-400 mb-1">Waktu Keluar</p>
-                        <div className="flex items-center justify-center space-x-2">
-                          {attendance[0].check_out_time ? (
-                            <>
-                              <XCircle className="w-4 h-4 text-blue-400" />
-                              <span className="text-lg font-semibold text-gray-200">
-                                {new Date(attendance[0].check_out_time).toLocaleTimeString('id-ID', {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-lg font-semibold text-gray-500">-</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Date Info */}
-                  <div className="text-center pt-2 border-t border-gray-700">
-                    <p className="text-sm text-gray-400">
-                      {new Date(attendance[0].check_in_time).toLocaleDateString('id-ID', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-6">
-                  <Clock className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-                  <p className="text-gray-400">Belum ada absensi hari ini</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
+        {/* Status Hari Ini */}
         <div className="bg-gray-800 rounded-xl shadow-md overflow-hidden border border-gray-700">
-          <div className="bg-gradient-to-r from-purple-900 to-purple-800 px-6 py-4">
-            <h2 className="text-xl font-semibold text-white">Riwayat Absensi</h2>
+          <div className="bg-gradient-to-r from-green-900 to-green-800 px-6 py-4">
+            <h2 className="text-xl font-semibold text-white flex items-center">
+              <CheckCircle className="w-6 h-6 mr-2" />
+              Status Hari Ini
+            </h2>
           </div>
           <div className="p-6">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-700">
-                <thead className="bg-gray-700/50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Tanggal
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Masuk
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Keluar
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-gray-800 divide-y divide-gray-700">
-                  {attendance.map((record) => (
-                    <tr key={record.id} className="hover:bg-gray-700/50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {new Date(record.check_in_time).toLocaleDateString('id-ID')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {new Date(record.check_in_time).toLocaleTimeString('id-ID')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {record.check_out_time
-                          ? new Date(record.check_out_time).toLocaleTimeString('id-ID')
-                          : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            record.status === 'present'
-                              ? 'bg-green-900/50 text-green-300 border border-green-700'
-                              : 'bg-yellow-900/50 text-yellow-300 border border-yellow-700'
-                          }`}
-                        >
-                          {record.status === 'present' ? 'Tepat Waktu' : 'Terlambat'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <TodayStatus attendance={attendance} />
           </div>
         </div>
-      </main>
-    </div>
+    </UserLayout>
   );
 }
