@@ -19,7 +19,8 @@ export default function UserLayout({ children }: UserLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <nav className="bg-gray-800 text-white shadow-lg">
+      {/* Navigasi tetap di atas */}
+      <nav className="bg-gray-800 text-white shadow-lg fixed top-0 left-0 w-full z-[9999]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex items-center justify-between">
             {/* Logo and Title */}
@@ -53,7 +54,10 @@ export default function UserLayout({ children }: UserLayoutProps) {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">{children}</main>
+      {/* Tambahkan relative dan z-index yang lebih rendah */}
+      <main className="relative z-0 pt-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {children}
+      </main>
     </div>
   );
 }

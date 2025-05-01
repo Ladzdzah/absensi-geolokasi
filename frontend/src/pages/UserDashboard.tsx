@@ -276,43 +276,47 @@ export default function EmployeeDashboard() {
 
   return (
     <UserLayout>
-      {error && (
-        <div className="bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-xl mb-4">
-          {error}
-        </div>
-      )}
+      {/* Hapus mt-16 karena sudah menggunakan pt-20 di UserLayout */}
+      <div className="space-y-8">
+        {error && (
+          <div className="bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-xl">
+            {error}
+          </div>
+        )}
 
-      {/* Lokasi Anda Saat Ini */}
-      <div className="bg-gray-800 rounded-xl shadow-md overflow-hidden border border-gray-700 mb-8">
-        <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4">
-          <h2 className="text-xl font-semibold text-white flex items-center">
-            <Clock className="w-6 h-6 mr-2" />
-            Lokasi Anda Saat Ini
-          </h2>
-        </div>
-        <div className="p-6">
-          <LocationMap currentLocation={currentLocation} />
-          <LocationStatus
-            currentLocation={currentLocation}
-            isWithinOfficeRadius={isWithinOfficeRadius}
-            currentTime={currentTime}
-          />
-          <div className="mt-4"> {/* Tambahkan margin atas untuk memberikan jarak */}
-            <AttendanceButtons
-              canCheckIn={canCheckIn}
-              canCheckOut={!!canCheckOut}
-              handleCheckIn={handleCheckIn}
-              handleCheckOut={handleCheckOut}
-              loading={loading}
-              isWithinOfficeRadius={isWithinOfficeRadius}
-              isWithinCheckInTime={isWithinCheckInTime}
-              isWithinCheckOutTime={isWithinCheckOutTime}
+        {/* Lokasi Anda Saat Ini */}
+        <div className="bg-gray-800 rounded-xl shadow-md overflow-hidden border border-gray-700">
+          <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4">
+            <h2 className="text-xl font-semibold text-white flex items-center">
+              <Clock className="w-6 h-6 mr-2" />
+              Lokasi Anda Saat Ini
+            </h2>
+          </div>
+          <div className="p-6">
+            {/* Tambahkan z-index yang lebih rendah pada wrapper LocationMap */}
+            <div className="relative z-0">
+              <LocationMap currentLocation={currentLocation} />
+            </div>
+            <LocationStatus
               currentLocation={currentLocation}
+              isWithinOfficeRadius={isWithinOfficeRadius}
+              currentTime={currentTime}
             />
+            <div className="mt-4">
+              <AttendanceButtons
+                canCheckIn={canCheckIn}
+                canCheckOut={!!canCheckOut}
+                handleCheckIn={handleCheckIn}
+                handleCheckOut={handleCheckOut}
+                loading={loading}
+                isWithinOfficeRadius={isWithinOfficeRadius}
+                isWithinCheckInTime={isWithinCheckInTime}
+                isWithinCheckOutTime={isWithinCheckOutTime}
+                currentLocation={currentLocation}
+              />
+            </div>
           </div>
         </div>
-      </div>
-
 
         {/* Status Hari Ini */}
         <div className="bg-gray-800 rounded-xl shadow-md overflow-hidden border border-gray-700">
@@ -326,6 +330,7 @@ export default function EmployeeDashboard() {
             <TodayStatus attendance={attendance} />
           </div>
         </div>
+      </div>
     </UserLayout>
   );
 }
