@@ -17,12 +17,11 @@ const {
   createCheckOut,
 } = require("../controllers/attendanceController");
 
-
 // Get all users
 router.get("/users", verifyToken, isAdmin, async (req, res) => {
   try {
     const [users] = await db.query(
-      "SELECT id, username, nama, role FROM users"
+      "SELECT id, username, full_name, role FROM users"
     );
     res.json(users);
   } catch (error) {
@@ -59,6 +58,76 @@ router.post("/register", verifyToken, isAdmin, async (req, res) => {
   } catch (error) {
     console.error("Error registering user:", error);
     res.status(500).json({ error: "Gagal mendaftarkan user" });
+  }
+});
+
+// Delete user
+router.delete("/users/:id", verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if user exists and is not an admin
+    const [user] = await db.query(
+      "SELECT role FROM users WHERE id = ?",
+      [id]
+    );
+
+    if (user.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User tidak ditemukan"
+      });
+    }
+
+    if (user[0].role === "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Tidak dapat menghapus akun admin"
+      });
+    }
+
+    // Delete the user
+    await db.query("DELETE FROM users WHERE id = ?", [id]);
+
+    res.json({
+      success: true,
+      message: "User berhasil dihapus"
+    });
+
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).json({
+      success: false, 
+      message: "Gagal menghapus user"
+    });
+  }
+});
+
+// Add new endpoint for admin password verification
+router.post("/verify", verifyToken, async (req, res) => {
+  try {
+    const { password } = req.body;
+    const userId = req.user.id;
+
+    const [admin] = await db.query(
+      'SELECT password FROM users WHERE id = ? AND role = "admin"',
+      [userId]
+    );
+
+    if (!admin[0]) {
+      return res.status(401).json({ message: 'Unauthorized access' });
+    }
+
+    const isValid = await bcrypt.compare(password, admin[0].password);
+    
+    if (!isValid) {
+      return res.status(401).json({ message: 'Password admin tidak valid' });
+    }
+
+    res.json({ message: 'Password admin valid' });
+  } catch (error) {
+    console.error('Error verifying admin:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

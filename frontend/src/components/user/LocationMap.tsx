@@ -16,7 +16,7 @@ const LocationMap: React.FC<LocationMapProps> = ({ currentLocation }) => {
       // Fokuskan peta ke lokasi perangkat setiap kali lokasi diperbarui
       mapRef.current.setView([latitude, longitude], 16);
     }
-  }, [currentLocation]); // Jalankan setiap kali currentLocation berubah
+  }, [currentLocation]);
 
   return (
     <div className="h-[300px] rounded-lg overflow-hidden border border-gray-600">
@@ -25,10 +25,10 @@ const LocationMap: React.FC<LocationMapProps> = ({ currentLocation }) => {
           center={[currentLocation.coords.latitude, currentLocation.coords.longitude]}
           zoom={16}
           style={{ height: '100%', width: '100%' }}
-          dragging={false} // Nonaktifkan geser manual
-          touchZoom={false} // Nonaktifkan zoom dengan sentuhan
-          doubleClickZoom={false} // Nonaktifkan zoom dengan klik ganda
-          scrollWheelZoom={false} // Nonaktifkan zoom dengan scroll
+          dragging={false}
+          touchZoom={false}
+          doubleClickZoom={false}
+          scrollWheelZoom={false}
         >
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

@@ -3,7 +3,7 @@ import { MapPin, Save } from 'lucide-react';
 import { MapContainer, TileLayer, Circle, Marker, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import AdminLayout from '../components/AdminLayout';
+import AdminLayout from '../components/admin/AdminLayout';
 
 const customIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',

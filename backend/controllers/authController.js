@@ -112,7 +112,49 @@ const loginUser = async (req, res) => {
   }
 };
 
+const resetPassword = async (req, res) => {
+  try {
+    const { username, newPassword, adminPassword } = req.body;
+
+    // Validasi input
+    if (!username || !newPassword || !adminPassword) {
+      return res.status(400).json({ error: "Semua field wajib diisi" });
+    }
+
+    // Verifikasi password admin
+    const [adminUser] = await db.query("SELECT * FROM users WHERE role = 'admin'");
+    if (adminUser.length === 0) {
+      return res.status(403).json({ error: "Admin tidak ditemukan" });
+    }
+
+    const isAdminPasswordValid = await bcrypt.compare(adminPassword, adminUser[0].password);
+    if (!isAdminPasswordValid) {
+      return res.status(403).json({ error: "Password admin salah" });
+    }
+
+    // Cek apakah username ada di database
+    const [user] = await db.query("SELECT * FROM users WHERE username = ?", [username]);
+    if (user.length === 0) {
+      return res.status(404).json({ error: "Username tidak ditemukan" });
+    }
+
+    // Hash password baru
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password di database
+    await db.query("UPDATE users SET password = ? WHERE username = ?", [hashedPassword, username]);
+
+    res.status(200).json({ message: "Password berhasil direset" });
+  } catch (error) {
+    console.error("Error in resetPassword:", error);
+    res.status(500).json({ error: "Gagal mereset password" });
+  }
+};
+
+
+
 module.exports = {
   register,
   loginUser,
+  resetPassword,
 };

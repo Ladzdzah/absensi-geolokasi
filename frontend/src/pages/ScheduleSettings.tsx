@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, AlertCircle, Save, Info } from 'lucide-react';
-import AdminLayout from '../components/AdminLayout';
+import AdminLayout from '../components/admin/AdminLayout';
 import { ATTENDANCE_RULES } from '../constants';
 
 export default function ScheduleSettings() {

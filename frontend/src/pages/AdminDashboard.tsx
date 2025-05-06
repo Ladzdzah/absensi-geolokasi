@@ -7,7 +7,7 @@ import { ATTENDANCE_RULES, OFFICE_LOCATION } from '../constants';
 import { MapContainer, TileLayer, Circle, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import AdminLayout from '../components/AdminLayout';
+import AdminLayout from '../components/admin/AdminLayout';
 import { getMonthName, getAttendanceStats, exportMonthlyRecap } from '../utils/attendanceUtils';
 
 // Perbaikan custom icon untuk marker

@@ -8,11 +8,11 @@ import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import iconRetina from 'leaflet/dist/images/marker-icon-2x.png';
 import 'leaflet/dist/leaflet.css';
-import UserLayout from '../components/UserLayout'; // Import UserLayout
-import LocationMap from '../components/LocationMap';
-import LocationStatus from '../components/LocationStatus';
-import AttendanceButtons from '../components/AttendanceButtons';
-import TodayStatus from '../components/TodayStatus';
+import UserLayout from '../components/user/UserLayout'; // Import UserLayout
+import LocationMap from '../components/user/LocationMap';
+import LocationStatus from '../components/user/LocationStatus';
+import AttendanceButtons from '../components/user/AttendanceButtons';
+import TodayStatus from '../components/user/TodayStatus';
 
 // Fix for default marker icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -50,7 +50,7 @@ const customIcon = new L.Icon({
   shadowSize: [41, 41],
 });
 
-export default function EmployeeDashboard() {
+export default function UserDashboard() {
   const { user } = useAuth();
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [loading, setLoading] = useState(false);
@@ -276,60 +276,42 @@ export default function EmployeeDashboard() {
 
   return (
     <UserLayout>
-      {/* Hapus mt-16 karena sudah menggunakan pt-20 di UserLayout */}
       <div className="space-y-8">
+        {/* Error Alert */}
         {error && (
           <div className="bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-xl">
             {error}
           </div>
         )}
 
-        {/* Lokasi Anda Saat Ini */}
+        {/* Location Section */}
         <div className="bg-gray-800 rounded-xl shadow-md overflow-hidden border border-gray-700">
           <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4">
-            <h2 className="text-xl font-semibold text-white flex items-center">
-              <Clock className="w-6 h-6 mr-2" />
-              Lokasi Anda Saat Ini
-            </h2>
+            <h2 className="text-xl font-semibold text-white">Lokasi Anda Saat Ini</h2>
           </div>
           <div className="p-6">
-            {/* Tambahkan z-index yang lebih rendah pada wrapper LocationMap */}
-            <div className="relative z-0">
-              <LocationMap currentLocation={currentLocation} />
-            </div>
+            <LocationMap currentLocation={currentLocation} />
             <LocationStatus
               currentLocation={currentLocation}
               isWithinOfficeRadius={isWithinOfficeRadius}
               currentTime={currentTime}
             />
-            <div className="mt-4">
-              <AttendanceButtons
-                canCheckIn={canCheckIn}
-                canCheckOut={!!canCheckOut}
-                handleCheckIn={handleCheckIn}
-                handleCheckOut={handleCheckOut}
-                loading={loading}
-                isWithinOfficeRadius={isWithinOfficeRadius}
-                isWithinCheckInTime={isWithinCheckInTime}
-                isWithinCheckOutTime={isWithinCheckOutTime}
-                currentLocation={currentLocation}
-              />
-            </div>
+            <AttendanceButtons
+              canCheckIn={canCheckIn}
+              canCheckOut={!!canCheckOut}
+              handleCheckIn={handleCheckIn}
+              handleCheckOut={handleCheckOut}
+              loading={loading}
+              isWithinOfficeRadius={isWithinOfficeRadius}
+              isWithinCheckInTime={isWithinCheckInTime}
+              isWithinCheckOutTime={isWithinCheckOutTime}
+              currentLocation={currentLocation}
+            />
           </div>
         </div>
 
-        {/* Status Hari Ini */}
-        <div className="bg-gray-800 rounded-xl shadow-md overflow-hidden border border-gray-700">
-          <div className="bg-gradient-to-r from-green-900 to-green-800 px-6 py-4">
-            <h2 className="text-xl font-semibold text-white flex items-center">
-              <CheckCircle className="w-6 h-6 mr-2" />
-              Status Hari Ini
-            </h2>
-          </div>
-          <div className="p-6">
-            <TodayStatus attendance={attendance} />
-          </div>
-        </div>
+        {/* Today's Status */}
+        <TodayStatus attendance={attendance} />
       </div>
     </UserLayout>
   );
