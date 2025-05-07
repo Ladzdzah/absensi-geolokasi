@@ -36,7 +36,8 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <nav className="bg-gray-800 text-white shadow-lg">
+      {/* Increased z-index to 9999 to ensure it's above all other elements */}
+      <nav className="fixed top-0 left-0 right-0 bg-gray-800 text-white shadow-lg z-[9999]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex items-center justify-between">
             {/* Logo and Title */}
@@ -123,10 +124,10 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
         <h2 className="text-2xl font-bold text-white mb-6">{title}</h2>
         {children}
       </main>
     </div>
   );
-} 
+}
