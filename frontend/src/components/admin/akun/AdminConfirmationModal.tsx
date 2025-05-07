@@ -52,30 +52,24 @@ const AdminConfirmationModal: React.FC<AdminConfirmationModalProps> = ({
       });
 
       if (!verifyResponse.ok) {
-        // Error notification for invalid password
         const errorNotification = document.createElement('div');
         errorNotification.className = `
-          fixed top-4 right-4 flex items-center space-x-4
-          bg-gray-800/90 border-l-4 border-red-500
-          text-gray-100 px-6 py-4 rounded-lg shadow-2xl
-          transform transition-all duration-300 ease-out z-50
+          fixed inset-0 flex items-center justify-center z-50
+          animate-fadeIn transition-all duration-300 ease-out
         `;
         
         errorNotification.innerHTML = `
-          <div class="flex items-center space-x-4">
-            <div class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-red-500/20">
-              <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path 
-                  stroke-linecap="round" 
-                  stroke-linejoin="round" 
-                  stroke-width="2" 
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </div>
-            <div>
-              <h3 class="font-semibold text-red-500">Gagal!</h3>
-              <p class="text-sm text-gray-300">Password admin tidak valid</p>
+          <div class="bg-gray-800/95 border-l-4 border-red-500 shadow-2xl rounded-lg max-w-md w-full mx-4">
+            <div class="flex items-center space-x-4 p-6">
+              <div class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-red-500/20">
+                <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-semibold text-red-500">Gagal!</h3>
+                <p class="text-sm text-gray-300">Password admin tidak valid</p>
+              </div>
             </div>
           </div>
         `;
@@ -84,9 +78,8 @@ const AdminConfirmationModal: React.FC<AdminConfirmationModalProps> = ({
         
         setTimeout(() => {
           errorNotification.style.opacity = '0';
-          errorNotification.style.transform = 'translateX(100%)';
-          setTimeout(() => errorNotification.remove(), 500);
-        }, 3000);
+          setTimeout(() => errorNotification.remove(), 300);
+        }, 2000);
 
         throw new Error('Password admin tidak valid');
       }
@@ -94,30 +87,25 @@ const AdminConfirmationModal: React.FC<AdminConfirmationModalProps> = ({
       // Jika verifikasi berhasil, lanjutkan dengan onConfirm
       await onConfirm(e);
       
-      // Success notification
+      // Success notification centered
       const notification = document.createElement('div');
       notification.className = `
-        fixed top-4 right-4 flex items-center space-x-4
-        bg-gray-800/90 border-l-4 border-green-500
-        text-gray-100 px-6 py-4 rounded-lg shadow-2xl
-        transform transition-all duration-300 ease-out z-50
+        fixed inset-0 flex items-center justify-center z-50
+        animate-fadeIn transition-all duration-300 ease-out
       `;
       
       notification.innerHTML = `
-        <div class="flex items-center space-x-4">
-          <div class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-green-500/20">
-            <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path 
-                stroke-linecap="round" 
-                stroke-linejoin="round" 
-                stroke-width="2" 
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
-          <div>
-            <h3 class="font-semibold text-green-500">Berhasil!</h3>
-            <p class="text-sm text-gray-300">${title.replace('Konfirmasi Password Admin untuk ', '')}</p>
+        <div class="bg-gray-800/95 border-l-4 border-green-500 shadow-2xl rounded-lg max-w-md w-full mx-4">
+          <div class="flex items-center space-x-4 p-6">
+            <div class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-green-500/20">
+              <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-semibold text-green-500">Berhasil!</h3>
+              <p class="text-sm text-gray-300">${title.replace('Konfirmasi Password Admin untuk ', '')}</p>
+            </div>
           </div>
         </div>
       `;
@@ -126,9 +114,8 @@ const AdminConfirmationModal: React.FC<AdminConfirmationModalProps> = ({
       
       setTimeout(() => {
         notification.style.opacity = '0';
-        notification.style.transform = 'translateX(100%)';
-        setTimeout(() => notification.remove(), 500);
-      }, 3000);
+        setTimeout(() => notification.remove(), 300);
+      }, 2000);
 
       // Reset state setelah berhasil
       setPassword('');
