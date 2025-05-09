@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { UserX, Users, } from 'lucide-react';
-import AdminConfirmationModal from './AdminConfirmationModal';
+import React, { useState, useEffect } from 'react';
+import { UserX, Users, Lock, CheckCircle, XCircle } from 'lucide-react';
+import { api } from '../../../services/api';
 
 interface AccountListProps {
   userList: Array<{
@@ -13,70 +13,74 @@ interface AccountListProps {
   loading: boolean;
 }
 
+interface Notification {
+  type: 'success' | 'error';
+  message: string;
+}
+
 const AccountList: React.FC<AccountListProps> = ({ userList, onDeleteUser, loading }) => {
-  const [showAdminConfirm, setShowAdminConfirm] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
-  const [adminError, setAdminError] = useState('');
-  const [deletedUser, setDeletedUser] = useState('');
+  const [error, setError] = useState('');
+  const [deletedUsername, setDeletedUsername] = useState('');
+  const [notification, setNotification] = useState<Notification | null>(null);
+
+  // Auto hide notification after 3 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   const handleDeleteClick = (userId: string, username: string) => {
     setSelectedUserId(userId);
-    setDeletedUser(username);
-    setShowAdminConfirm(true);
-    setAdminError('');
+    setDeletedUsername(username);
+    setShowConfirmModal(true);
+    setError('');
   };
 
-  const handleConfirmDelete = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleConfirmDelete = async () => {
     try {
-      // Verify admin password first
-      const verifyResponse = await fetch('http://localhost:5000/api/admin/verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        },
-        body: JSON.stringify({ password: adminPassword })
-      });
+      // Verifikasi password admin
+      await api.auth.verifyAdmin(adminPassword);
 
-      if (!verifyResponse.ok) {
-        throw new Error('Password admin tidak valid');
-      }
-
-      // Perbaiki endpoint URL untuk delete user
-      const deleteResponse = await fetch(`http://localhost:5000/api/admin/users/${selectedUserId}`, { // <-- Perubahan disini
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        }
-      });
-
-      if (!deleteResponse.ok) {
-        throw new Error('Gagal menghapus akun');
-      }
-
-      // Close modal and reset states
-      setShowAdminConfirm(false);
-      setAdminPassword('');
-
-      // Call parent's onDeleteUser to update UI
+      // Hapus user jika verifikasi berhasil
+      await api.users.delete(selectedUserId);
+      
+      // Update UI langsung menggunakan callback
       onDeleteUser(selectedUserId);
 
-      // Reset states
+      // Reset state dan tutup modal
       handleCloseModal();
+      
+      // Show success notification
+      setNotification({
+        type: 'success',
+        message: `Akun ${deletedUsername} berhasil dihapus`
+      });
 
     } catch (err: any) {
-      setAdminError(err.message);
+      console.error('Error:', err);
+      setError(err.message || 'Gagal menghapus user');
+      
+      // Show error notification
+      setNotification({
+        type: 'error',
+        message: err.message || 'Gagal menghapus user'
+      });
     }
   };
 
   const handleCloseModal = () => {
-    setShowAdminConfirm(false);
+    setShowConfirmModal(false);
     setAdminPassword('');
-    setAdminError('');
+    setError('');
     setSelectedUserId('');
-    setDeletedUser('');
+    setDeletedUsername('');
   };
 
   return (
@@ -139,14 +143,7 @@ const AccountList: React.FC<AccountListProps> = ({ userList, onDeleteUser, loadi
                             : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20'
                         }`}
                       >
-                        {loading && selectedUserId === user.id ? (
-                          <svg className="animate-spin h-4 w-4 mr-1.5" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                          </svg>
-                        ) : (
-                          <UserX className="w-4 h-4 mr-1.5" />
-                        )}
+                        <UserX className="w-4 h-4 mr-1.5" />
                         Hapus
                       </button>
                     </td>
@@ -165,18 +162,143 @@ const AccountList: React.FC<AccountListProps> = ({ userList, onDeleteUser, loadi
         </div>
       </div>
 
-      <AdminConfirmationModal
-        isOpen={showAdminConfirm}
-        onClose={handleCloseModal}
-        onConfirm={handleConfirmDelete}
-        password={adminPassword}
-        setPassword={setAdminPassword}
-        error={adminError}
-        loading={loading}
-        title={`Konfirmasi Password Admin untuk Menghapus Akun ${deletedUser}`}
-      />
+      {/* Notification */}
+      {notification && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div 
+            className={`flex items-center gap-4 px-8 py-4 rounded-2xl shadow-2xl
+              transform transition-all duration-500 animate-fade-up backdrop-blur-sm
+              ${notification.type === 'success' 
+                ? 'bg-gray-800/90 border-2 border-green-500/30' 
+                : 'bg-gray-800/90 border-2 border-red-500/30'}`}
+          >
+            <div 
+              className={`w-12 h-12 rounded-xl flex items-center justify-center
+                transition-all duration-500 animate-bounce-small
+                ${notification.type === 'success' 
+                  ? 'bg-green-500/20 text-green-400' 
+                  : 'bg-red-500/20 text-red-400'}`}
+            >
+              {notification.type === 'success' ? (
+                <CheckCircle className="w-6 h-6" />
+              ) : (
+                <XCircle className="w-6 h-6" />
+              )}
+            </div>
+            <div className="flex flex-col">
+              <span className={`text-sm font-semibold mb-0.5
+                ${notification.type === 'success' ? 'text-green-400' : 'text-red-400'}`}
+              >
+                {notification.type === 'success' ? 'Berhasil' : 'Gagal'}
+              </span>
+              <span className="text-gray-300 font-medium">
+                {notification.message}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div 
+            className="bg-gray-800/90 rounded-xl p-8 w-full max-w-md shadow-2xl transform 
+                       transition-all duration-300 scale-100 border border-gray-700/50"
+          >
+            {/* Header */}
+            <div className="text-center mb-6">
+              <div className="bg-red-500/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Lock className="w-8 h-8 text-red-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-100">
+                Konfirmasi Password Admin
+              </h3>
+              <p className="text-sm text-gray-400 mt-2">
+                Untuk keamanan, masukkan password admin untuk melanjutkan
+              </p>
+            </div>
+
+            {/* Input Password */}
+            <div className="relative mb-6">
+              <div className="relative">
+                <input
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  className="w-full h-12 pl-12 pr-4 bg-gray-900/50 border border-gray-700/50 rounded-lg 
+                            text-gray-200 placeholder-gray-500/50 focus:border-red-500/50 
+                            focus:ring-2 focus:ring-red-500/20 transition-all duration-200"
+                  placeholder="Password Admin"
+                  autoFocus
+                />
+                <Lock className="w-5 h-5 text-gray-500 absolute left-4 top-3.5" />
+              </div>
+              
+              {/* Error Message */}
+              {error && (
+                <div className="mt-3 text-sm text-red-400 bg-red-500/10 border border-red-500/20 
+                              rounded-lg px-4 py-2.5 flex items-center">
+                  <div className="w-1.5 h-1.5 bg-red-400 rounded-full mr-2"></div>
+                  {error}
+                </div>
+              )}
+            </div>
+
+            {/* Buttons */}
+            <div className="flex space-x-3">
+              <button
+                onClick={handleCloseModal}
+                className="flex-1 px-4 py-2.5 bg-gray-700/50 text-gray-300 rounded-lg 
+                          hover:bg-gray-700 transition-all duration-200 font-medium"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-red-500 to-red-600 
+                          text-white rounded-lg hover:from-red-600 hover:to-red-700 
+                          transition-all duration-200 font-medium shadow-lg 
+                          shadow-red-500/25"
+              >
+                Konfirmasi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
 
 export default AccountList;
+
+/*
+@keyframes fade-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounce-small {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.5s ease-out;
+}
+
+.animate-bounce-small {
+  animation: bounce-small 2s infinite;
+}
+*/

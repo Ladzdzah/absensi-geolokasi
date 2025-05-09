@@ -1,16 +1,10 @@
 const express = require("express");
 const router = express.Router();
-const { register, loginUser, resetPassword } = require("../controllers/authController");
+const authController = require("../controllers/authController");
+const { verifyToken, isAdmin } = require("../middleware/authMiddleware"); // Add isAdmin import
 
-// Register route
-router.post("/register", register);
+router.post("/register", authController.register);
+router.post("/login", authController.loginUser);
+router.post("/reset-password", verifyToken, authController.resetPassword);
 
-// Login route
-router.post("/login", loginUser);
-
-// Reset password route
-router.post("/reset-password", resetPassword);
-
-
-
-module.exports = router;module.exports = router;
+module.exports = router;

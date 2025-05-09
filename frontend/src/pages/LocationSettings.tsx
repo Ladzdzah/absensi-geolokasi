@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../components/admin/AdminLayout';
 import { LocationSettingsForm } from '../components/admin/location/LocationSettingsForm';
+import { api } from '../services/api';
 
 export default function LocationSettings() {
   const [locationSettings, setLocationSettings] = useState({
@@ -14,27 +15,14 @@ export default function LocationSettings() {
 
   const fetchOfficeLocation = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/admin/office-location', {
-        method: 'GET',
-        headers: { 
-          'Content-Type': 'application/json', 
-          Authorization: `Bearer ${localStorage.getItem('authToken')}` 
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Gagal mengambil lokasi kantor');
-      }
-
-      const data = await response.json();
-      
+      const data = await api.location.get();
       setLocationSettings({
-        latitude: data.lat || 0,
-        longitude: data.lng || 0,
-        radius: data.radius || 100,
+        latitude: data.lat,
+        longitude: data.lng,
+        radius: data.radius
       });
-    } catch (err: any) {
-      setError(err.message);
+    } catch (error: any) {
+      setError(error.message);
     }
   };
 
@@ -49,27 +37,14 @@ export default function LocationSettings() {
     setSuccess('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/admin/office-location', {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json', 
-          Authorization: `Bearer ${localStorage.getItem('authToken')}` 
-        },
-        body: JSON.stringify({
-          lat: locationSettings.latitude,
-          lng: locationSettings.longitude,
-          radius: locationSettings.radius
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Gagal memperbarui lokasi kantor');
-      }
-
-      const data = await response.json();
-      setSuccess(data.message || 'Lokasi kantor berhasil diperbarui');
-    } catch (err: any) {
-      setError(err.message);
+      await api.location.update(
+        locationSettings.latitude,
+        locationSettings.longitude,
+        locationSettings.radius
+      );
+      setSuccess('Lokasi kantor berhasil diperbarui');
+    } catch (error: any) {
+      setError(error.message);
     } finally {
       setLoading(false);
     }

@@ -62,6 +62,40 @@ export const LocationSettingsForm: React.FC<LocationSettingsFormProps> = ({
   success,
   loading,
 }) => {
+  // Keep track of the original location settings to check if changes were made
+  const [originalSettings] = useState({
+    latitude: locationSettings.latitude,
+    longitude: locationSettings.longitude,
+    radius: locationSettings.radius
+  });
+  const [noChangesMessage, setNoChangesMessage] = useState('');
+
+  // Check if location settings have been changed
+  const hasLocationChanged = () => {
+    return (
+      originalSettings.latitude !== locationSettings.latitude ||
+      originalSettings.longitude !== locationSettings.longitude ||
+      originalSettings.radius !== locationSettings.radius
+    );
+  };
+
+  // Handle form submission with validation
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Check if any changes were made
+    if (!hasLocationChanged()) {
+      setNoChangesMessage('Lokasi kantor belum diubah. Silakan ubah lokasi terlebih dahulu.');
+      return;
+    }
+    
+    // Clear any previous message
+    setNoChangesMessage('');
+    
+    // Proceed with the provided update handler
+    handleLocationUpdate(e);
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-gray-800 rounded-xl shadow-md p-4 border border-gray-700">
@@ -73,7 +107,7 @@ export const LocationSettingsForm: React.FC<LocationSettingsFormProps> = ({
 
       <div className="bg-gray-800 rounded-xl shadow-md overflow-hidden border border-gray-700">
         <div className="p-6">
-          <form onSubmit={handleLocationUpdate} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="relative">
                 <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -199,8 +233,8 @@ export const LocationSettingsForm: React.FC<LocationSettingsFormProps> = ({
                       </div>
                       <div className="mt-2 text-sm text-green-300">
                         <ul className="list-disc list-inside space-y-1">
-                          <li>Latitude: {locationSettings.latitude.toFixed(6)}°</li>
-                          <li>Longitude: {locationSettings.longitude.toFixed(6)}°</li>
+                          <li>Latitude: {typeof locationSettings.latitude === 'number' ? locationSettings.latitude.toFixed(6) : '0.000000'}°</li>
+                          <li>Longitude: {typeof locationSettings.longitude === 'number' ? locationSettings.longitude.toFixed(6) : '0.000000'}°</li>
                           <li>Radius: {locationSettings.radius} meter</li>
                         </ul>
                       </div>

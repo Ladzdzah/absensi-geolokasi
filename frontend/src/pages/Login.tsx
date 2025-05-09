@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaUser, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { api } from '../services/api';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -16,17 +17,7 @@ export default function Login() {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Login gagal');
-      }
+      const data = await api.auth.login(username, password);
 
       // Save token and user data to localStorage
       localStorage.setItem('authToken', data.token);
@@ -35,7 +26,7 @@ export default function Login() {
       // Redirect based on role
       if (data.user.role === 'admin') {
         navigate('/admin');
-      } else if (data.user.role === 'user') { // Ubah dari "employee" menjadi "user"
+      } else if (data.user.role === 'user') {
         navigate('/user');
       }
     } catch (err: any) {

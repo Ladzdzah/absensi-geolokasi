@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Calendar, Clock, AlertCircle, Save, Info } from 'lucide-react';
+import React from 'react';
+import { Calendar, Clock, AlertCircle, Save, Info, ArrowRight } from 'lucide-react';
 import { ATTENDANCE_RULES } from '../../../constants';
 
 interface ScheduleSettingsFormProps {
@@ -23,174 +23,177 @@ interface ScheduleSettingsFormProps {
   loading: boolean;
 }
 
-const TimeInput = ({ 
-  label, 
-  value, 
-  onChange 
-}: { 
-  label: string; 
-  value: string; 
-  onChange: (time: string) => void;
-}) => {
-  const [hours, minutes] = value.split(':');
-
-  const handleTimeChange = (type: 'hours' | 'minutes', newValue: string) => {
-    let h = type === 'hours' ? newValue : hours;
-    let m = type === 'minutes' ? newValue : minutes;
-
-    h = h.padStart(2, '0').slice(0, 2);
-    m = m.padStart(2, '0').slice(0, 2);
-
-    if (parseInt(h) > 23) h = '23';
-    if (parseInt(m) > 59) m = '59';
-
-    onChange(`${h}:${m}`);
-  };
-
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <label className="text-sm text-gray-400 font-medium min-w-[100px]">
-        {label}
-      </label>
-      <div className="flex items-center bg-gray-800/80 rounded-xl border border-gray-600/50 p-1.5 hover:border-gray-500/50 transition-colors">
-        <input
-          type="number"
-          value={hours}
-          onChange={(e) => handleTimeChange('hours', e.target.value)}
-          className="w-14 h-10 bg-transparent border-none text-center text-white focus:ring-0 text-xl font-medium [-moz-appearance:_textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          placeholder="00"
-          min="0"
-          max="23"
-        />
-        <span className="text-blue-400 text-2xl font-light px-0.5 select-none">:</span>
-        <input
-          type="number"
-          value={minutes}
-          onChange={(e) => handleTimeChange('minutes', e.target.value)}
-          className="w-14 h-10 bg-transparent border-none text-center text-white focus:ring-0 text-xl font-medium [-moz-appearance:_textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          placeholder="00"
-          min="0"
-          max="59"
-        />
-      </div>
-    </div>
-  );
-};
-
-export const ScheduleSettingsForm: React.FC<ScheduleSettingsFormProps> = ({
+const ScheduleSettingsForm = ({
   scheduleSettings,
   setScheduleSettings,
   handleScheduleUpdate,
   error,
   success,
   loading,
-}) => {
+}: ScheduleSettingsFormProps) => {
+  const handleTimeChange = (type: 'checkInStart' | 'checkInEnd' | 'checkOutStart' | 'checkOutEnd', value: string) => {
+    const [hours, minutes] = value.split(':');
+    const h = hours.padStart(2, '0');
+    const m = minutes.padStart(2, '0');
+    const formattedTime = `${h}:${m}:00`;
+
+    setScheduleSettings((prev: any) => ({
+      ...prev,
+      [type.includes('checkIn') ? 'checkIn' : 'checkOut']: {
+        ...prev[type.includes('checkIn') ? 'checkIn' : 'checkOut'],
+        [type.endsWith('Start') ? 'start' : 'end']: formattedTime,
+      },
+    }));
+  };
+
+  const formatTimeForDisplay = (time: string) => {
+    return time ? time.slice(0, 5) : '';
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
-      {/* Info Card */}
-      <div className="bg-gradient-to-r from-blue-600/10 to-blue-500/10 backdrop-blur-sm border border-blue-500/20 p-4 mb-8 rounded-xl">
-        <div className="flex items-start space-x-3">
-          <Info className="h-5 w-5 text-blue-400 mt-0.5" />
-          <p className="text-sm text-gray-300 leading-relaxed">
-            Atur jadwal absensi untuk absen masuk dan keluar pegawai. Pastikan rentang waktu sudah sesuai dengan kebijakan perusahaan.
-          </p>
-        </div>
-      </div>
-
-      <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-700/30">
-        <div className="p-6 border-b border-gray-700/30 text-center">
-          <h2 className="text-xl font-medium text-white inline-flex items-center">
-            <Calendar className="w-5 h-5 mr-3 text-blue-400" />
-            Pengaturan Jadwal Absensi
-          </h2>
-        </div>
-
-        <div className="p-6">
-          <form onSubmit={handleScheduleUpdate} className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Check-in Section */}
-              <div className="bg-gray-800/50 p-6 rounded-xl">
-                <div className="flex items-center mb-6">
-                  <div className="bg-blue-500/10 p-2.5 rounded-xl">
-                    <Clock className="w-6 h-6 text-blue-400" />
+      <style>{`
+        @keyframes pulseSlow {
+          0%, 100% { opacity: 0.7; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.05); }
+        }
+        .animate-pulse-slow {
+          animation: pulseSlow 2s infinite ease-in-out;
+        }
+      `}</style>
+      <form onSubmit={handleScheduleUpdate} className="p-6 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Check-In Section */}
+          <div className="group bg-gradient-to-br from-gray-800/70 via-gray-800/50 to-gray-800/70 p-5 rounded-xl border border-blue-500/20 backdrop-blur-sm hover:border-blue-400/30 transition-colors relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/15 transition-colors">
+                <Clock className="w-5 h-5 text-blue-400" />
+              </div>
+              <h3 className="text-lg font-medium text-blue-100">Check-In</h3>
+            </div>
+            <div className="space-y-4 relative z-10">
+              <div>
+                <label className="block text-sm font-medium text-blue-200 mb-2">Waktu Mulai</label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 w-10 flex items-center justify-center pointer-events-none bg-gradient-to-r from-blue-500/15 to-blue-500/5 border-r border-blue-500/20 rounded-l-lg">
+                    <Clock className="h-4 w-4 text-blue-400 group-hover:text-blue-300 transition-colors drop-shadow-sm" />
                   </div>
-                  <h3 className="text-lg font-medium text-white ml-3">Absen Masuk</h3>
-                </div>
-                <div className="space-y-6">
-                  <TimeInput
-                    label="Waktu Mulai"
-                    value={scheduleSettings.checkIn.start}
-                    onChange={(time) => setScheduleSettings({
-                      ...scheduleSettings,
-                      checkIn: { ...scheduleSettings.checkIn, start: time }
-                    })}
+                  <input
+                    type="time"
+                    value={formatTimeForDisplay(scheduleSettings.checkIn.start)}
+                    onChange={(e) => handleTimeChange('checkInStart', e.target.value)}
+                    className="w-full pl-12 pr-4 py-2.5 rounded-lg bg-gray-900/60 border border-blue-500/30 text-blue-100 text-center font-medium tracking-wider focus:ring-2 focus:ring-blue-400 focus:border-blue-400/70 hover:border-blue-400/50 transition-all duration-200"
+                    style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
                   />
-                  <TimeInput
-                    label="Waktu Selesai"
-                    value={scheduleSettings.checkIn.end}
-                    onChange={(time) => setScheduleSettings({
-                      ...scheduleSettings,
-                      checkIn: { ...scheduleSettings.checkIn, end: time }
-                    })}
-                  />
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ArrowRight className="h-3.5 w-3.5 text-blue-400 drop-shadow-sm animate-pulse-slow" />
+                  </div>
                 </div>
               </div>
-
-              {/* Check-out Section - mirror styles from check-in */}
-              <div className="bg-gray-800/50 p-6 rounded-xl">
-                <div className="flex items-center mb-6">
-                  <div className="bg-blue-500/10 p-2.5 rounded-xl">
-                    <Clock className="w-6 h-6 text-blue-400" />
+              <div>
+                <label className="block text-sm font-medium text-blue-200 mb-2">Waktu Selesai</label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 w-10 flex items-center justify-center pointer-events-none bg-gradient-to-r from-blue-500/15 to-blue-500/5 border-r border-blue-500/20 rounded-l-lg">
+                    <Clock className="h-4 w-4 text-blue-400 group-hover:text-blue-300 transition-colors drop-shadow-sm" />
                   </div>
-                  <h3 className="text-lg font-medium text-white ml-3">Absen Keluar</h3>
-                </div>
-                <div className="space-y-6">
-                  <TimeInput
-                    label="Waktu Mulai"
-                    value={scheduleSettings.checkOut.start}
-                    onChange={(time) => setScheduleSettings({
-                      ...scheduleSettings,
-                      checkOut: { ...scheduleSettings.checkOut, start: time }
-                    })}
+                  <input
+                    type="time"
+                    value={formatTimeForDisplay(scheduleSettings.checkIn.end)}
+                    onChange={(e) => handleTimeChange('checkInEnd', e.target.value)}
+                    className="w-full pl-12 pr-4 py-2.5 rounded-lg bg-gray-900/60 border border-blue-500/30 text-blue-100 text-center font-medium tracking-wider focus:ring-2 focus:ring-blue-400 focus:border-blue-400/70 hover:border-blue-400/50 transition-all duration-200"
+                    style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
                   />
-                  <TimeInput
-                    label="Waktu Selesai"
-                    value={scheduleSettings.checkOut.end}
-                    onChange={(time) => setScheduleSettings({
-                      ...scheduleSettings,
-                      checkOut: { ...scheduleSettings.checkOut, end: time }
-                    })}
-                  />
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ArrowRight className="h-3.5 w-3.5 text-blue-400 drop-shadow-sm animate-pulse-slow" />
+                  </div>
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Notifications */}
-            {(error || success) && (
-              <div className={`flex items-center space-x-3 px-4 py-3 rounded-lg ${
-                error 
-                  ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
-                  : 'bg-green-500/10 text-green-400 border border-green-500/20'
-              }`}>
-                {error ? <AlertCircle className="w-5 h-5" /> : <Save className="w-5 h-5" />}
-                <p className="text-sm">{error || 'Jadwal berhasil disimpan'}</p>
+          {/* Check-Out Section */}
+          <div className="group bg-gradient-to-br from-gray-800/70 via-gray-800/50 to-gray-800/70 p-5 rounded-xl border border-blue-500/20 backdrop-blur-sm hover:border-blue-400/30 transition-colors relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/15 transition-colors">
+                <Clock className="w-5 h-5 text-blue-400" />
               </div>
-            )}
-
-            {/* Submit Button */}
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={loading}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2.5 rounded-lg transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Save className="w-5 h-5" />
-                <span>{loading ? 'Menyimpan...' : 'Simpan'}</span>
-              </button>
+              <h3 className="text-lg font-medium text-blue-100">Check-Out</h3>
             </div>
-          </form>
+            <div className="space-y-4 relative z-10">
+              <div>
+                <label className="block text-sm font-medium text-blue-200 mb-2">Waktu Mulai</label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 w-10 flex items-center justify-center pointer-events-none bg-gradient-to-r from-blue-500/15 to-blue-500/5 border-r border-blue-500/20 rounded-l-lg">
+                    <Clock className="h-4 w-4 text-blue-400 group-hover:text-blue-300 transition-colors drop-shadow-sm" />
+                  </div>
+                  <input
+                    type="time"
+                    value={formatTimeForDisplay(scheduleSettings.checkOut.start)}
+                    onChange={(e) => handleTimeChange('checkOutStart', e.target.value)}
+                    className="w-full pl-12 pr-4 py-2.5 rounded-lg bg-gray-900/60 border border-blue-500/30 text-blue-100 text-center font-medium tracking-wider focus:ring-2 focus:ring-blue-400 focus:border-blue-400/70 hover:border-blue-400/50 transition-all duration-200"
+                    style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
+                  />
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ArrowRight className="h-3.5 w-3.5 text-blue-400 drop-shadow-sm animate-pulse-slow" />
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-blue-200 mb-2">Waktu Selesai</label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 w-10 flex items-center justify-center pointer-events-none bg-gradient-to-r from-blue-500/15 to-blue-500/5 border-r border-blue-500/20 rounded-l-lg">
+                    <Clock className="h-4 w-4 text-blue-400 group-hover:text-blue-300 transition-colors drop-shadow-sm" />
+                  </div>
+                  <input
+                    type="time"
+                    value={formatTimeForDisplay(scheduleSettings.checkOut.end)}
+                    onChange={(e) => handleTimeChange('checkOutEnd', e.target.value)}
+                    className="w-full pl-12 pr-4 py-2.5 rounded-lg bg-gray-900/60 border border-blue-500/30 text-blue-100 text-center font-medium tracking-wider focus:ring-2 focus:ring-blue-400 focus:border-blue-400/70 hover:border-blue-400/50 transition-all duration-200"
+                    style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
+                  />
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ArrowRight className="h-3.5 w-3.5 text-blue-400 drop-shadow-sm animate-pulse-slow" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+
+        {/* Status Messages */}
+        {error && (
+          <div className="flex items-center gap-2 p-3 bg-red-900/30 border border-red-500/30 rounded-lg">
+            <AlertCircle className="w-4 h-4 text-red-400" />
+            <p className="text-sm text-red-200">{error}</p>
+          </div>
+        )}
+        {success && (
+          <div className="flex items-center gap-2 p-3 bg-green-900/30 border border-green-500/30 rounded-lg">
+            <Info className="w-4 h-4 text-emerald-400" />
+            <p className="text-sm text-emerald-200">Jadwal berhasil diperbarui!</p>
+          </div>
+        )}
+
+        {/* Submit Button */}
+        <div className="flex justify-end pt-4">
+          <button
+            type="submit"
+            disabled={loading}
+            className="group relative inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg font-medium overflow-hidden shadow-md hover:shadow-blue-500/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+          >
+            <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-blue-500 to-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></span>
+            <Save className="w-4 h-4 relative z-10" />
+            <span className="relative z-10">{loading ? 'Menyimpan...' : 'Simpan Jadwal'}</span>
+            <span className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 z-10 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300">
+              <ArrowRight className="w-4 h-4" />
+            </span>
+          </button>
+        </div>
+      </form>
     </div>
   );
 };
+
+export default ScheduleSettingsForm;

@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { UserPlus, User, Lock, BadgeCheck, Eye, EyeOff } from 'lucide-react';
-import AdminConfirmationModal from './AdminConfirmationModal';
+import React, { useState, useEffect } from 'react';
+import { UserPlus, User, Lock, BadgeCheck, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
 
 /**
  * Interface untuk props komponen Form Pembuatan Akun
@@ -15,6 +14,11 @@ interface CreateAccountFormProps {
   setNewUser: (user: any) => void;
   handleCreateUser: (e: React.FormEvent) => void;
   loading: boolean;
+}
+
+interface Notification {
+  type: 'success' | 'error';
+  message: string;
 }
 
 /**
@@ -43,76 +47,44 @@ const CreateAccountForm: React.FC<CreateAccountFormProps> = ({
   handleCreateUser,
   loading,
 }) => {
-  const [showAdminConfirm, setShowAdminConfirm] = useState(false);
-  const [adminPassword, setAdminPassword] = useState('');
-  const [adminError, setAdminError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [notification, setNotification] = useState<Notification | null>(null);
   const formRef = React.useRef<HTMLFormElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Auto hide notification after 3 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!newUser.full_name || !newUser.username || !newUser.password || newUser.password.length < 6) {
-      setAdminError('Silakan lengkapi semua field dengan benar');
+      setNotification({
+        type: 'error',
+        message: 'Silakan lengkapi semua field dengan benar'
+      });
       return;
     }
-    
-    setShowAdminConfirm(true);
-    setAdminError('');
-  };
 
-  const handleConfirm = async (e: React.FormEvent) => {
-    e.preventDefault();
     try {
-      const verifyResponse = await fetch('http://localhost:5000/api/admin/verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        },
-        body: JSON.stringify({ password: adminPassword })
+      await handleCreateUser(e);
+      setNotification({
+        type: 'success',
+        message: `Akun ${newUser.username} berhasil dibuat`
       });
-
-      if (!verifyResponse.ok) {
-        setAdminError('Password admin tidak valid');
-        return;
-      }
-
-      const createResponse = await fetch('http://localhost:5000/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        },
-        body: JSON.stringify(newUser)
-      });
-
-      if (!createResponse.ok) {
-        throw new Error('Gagal membuat akun');
-      }
-
-      setShowAdminConfirm(false);
-      setAdminPassword('');
-      setAdminError('');
-      handleCreateUser(e);
-      
-      // Reset form
-      setNewUser({ 
-        username: '', 
-        password: '', 
-        full_name: '', 
-        role: 'user' 
-      });
-
     } catch (err: any) {
-      setAdminError('Gagal membuat akun');
+      console.error('Error:', err);
+      setNotification({
+        type: 'error',
+        message: err.message || 'Gagal menambahkan user'
+      });
     }
-  };
-
-  const handleCloseModal = () => {
-    setShowAdminConfirm(false);
-    setAdminPassword('');
-    setAdminError('');
   };
 
   return (
@@ -224,16 +196,42 @@ const CreateAccountForm: React.FC<CreateAccountFormProps> = ({
         </form>
       </div>
 
-      <AdminConfirmationModal
-        isOpen={showAdminConfirm}
-        onClose={handleCloseModal}
-        onConfirm={handleConfirm}
-        password={adminPassword}
-        setPassword={setAdminPassword}
-        error={adminError}
-        loading={loading}
-        title="Konfirmasi Password Admin untuk Membuat Akun"
-      />
+      {/* Notification */}
+      {notification && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div 
+            className={`flex items-center gap-4 px-8 py-4 rounded-2xl shadow-2xl
+              transform transition-all duration-500 animate-fade-up backdrop-blur-sm
+              ${notification.type === 'success' 
+                ? 'bg-gray-800/90 border-2 border-green-500/30' 
+                : 'bg-gray-800/90 border-2 border-red-500/30'}`}
+          >
+            <div 
+              className={`w-12 h-12 rounded-xl flex items-center justify-center
+                transition-all duration-500 animate-bounce-small
+                ${notification.type === 'success' 
+                  ? 'bg-green-500/20 text-green-400' 
+                  : 'bg-red-500/20 text-red-400'}`}
+            >
+              {notification.type === 'success' ? (
+                <CheckCircle className="w-6 h-6" />
+              ) : (
+                <XCircle className="w-6 h-6" />
+              )}
+            </div>
+            <div className="flex flex-col">
+              <span className={`text-sm font-semibold mb-0.5
+                ${notification.type === 'success' ? 'text-green-400' : 'text-red-400'}`}
+              >
+                {notification.type === 'success' ? 'Berhasil' : 'Gagal'}
+              </span>
+              <span className="text-gray-300 font-medium">
+                {notification.message}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

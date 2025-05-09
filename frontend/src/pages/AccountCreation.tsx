@@ -63,17 +63,20 @@ export default function AccountCreation() {
       const response = await fetch('http://localhost:5000/api/auth/register', {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         },
-        body: JSON.stringify(newUser)
+        body: JSON.stringify(newUser),
       });
 
-      if (response.ok) {
-        setNewUser({ username: '', password: '', full_name: '', role: 'user' });
-        fetchUsers();
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Gagal membuat user');
       }
-    } catch (err) {
+
+      setNewUser({ username: '', password: '', full_name: '', role: 'user' });
+      fetchUsers(); // Refresh daftar user
+    } catch (err: any) {
       console.error('Gagal membuat user:', err);
     } finally {
       setLoading(false);
@@ -83,17 +86,9 @@ export default function AccountCreation() {
   // Handler untuk menghapus user
   const handleDeleteUser = async (userId: string) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/users/${userId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        }
-      });
-
-      if (response.ok) {
-        setUsers(users.filter(user => user.id !== userId));
-      }
-    } catch (err) {
+      // State diupdate langsung setelah penghapusan berhasil
+      setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+    } catch (err: any) {
       console.error('Gagal menghapus user:', err);
     }
   };
@@ -112,7 +107,6 @@ export default function AccountCreation() {
             resetPasswordData={resetPasswordData}
             setResetPasswordData={setResetPasswordData}
             userList={users.map(user => user.username)}
-            openModal={() => {}}
             loading={loading}
           />
         </div>
