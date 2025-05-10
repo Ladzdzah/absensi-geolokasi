@@ -74,36 +74,36 @@ const ScheduleSettingsForm = ({
             </div>
             <div className="space-y-4 relative z-10">
               <div>
-                <label className="block text-sm font-medium text-blue-200 mb-2">Waktu Mulai</label>
+                  <label className="block text-sm font-medium text-blue-200 mb-2">Waktu Mulai</label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 w-10 flex items-center justify-center pointer-events-none bg-gradient-to-r from-blue-500/15 to-blue-500/5 border-r border-blue-500/20 rounded-l-lg">
                     <Clock className="h-4 w-4 text-blue-400 group-hover:text-blue-300 transition-colors drop-shadow-sm" />
-                  </div>
-                  <input
-                    type="time"
-                    value={formatTimeForDisplay(scheduleSettings.checkIn.start)}
-                    onChange={(e) => handleTimeChange('checkInStart', e.target.value)}
+                    </div>
+                    <input
+                      type="time"
+                      value={formatTimeForDisplay(scheduleSettings.checkIn.start)}
+                      onChange={(e) => handleTimeChange('checkInStart', e.target.value)}
                     className="w-full pl-12 pr-4 py-2.5 rounded-lg bg-gray-900/60 border border-blue-500/30 text-blue-100 text-center font-medium tracking-wider focus:ring-2 focus:ring-blue-400 focus:border-blue-400/70 hover:border-blue-400/50 transition-all duration-200"
                     style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
-                  />
+                    />
                   <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
                     <ArrowRight className="h-3.5 w-3.5 text-blue-400 drop-shadow-sm animate-pulse-slow" />
                   </div>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-blue-200 mb-2">Waktu Selesai</label>
+                  <label className="block text-sm font-medium text-blue-200 mb-2">Waktu Selesai</label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 w-10 flex items-center justify-center pointer-events-none bg-gradient-to-r from-blue-500/15 to-blue-500/5 border-r border-blue-500/20 rounded-l-lg">
                     <Clock className="h-4 w-4 text-blue-400 group-hover:text-blue-300 transition-colors drop-shadow-sm" />
-                  </div>
-                  <input
-                    type="time"
-                    value={formatTimeForDisplay(scheduleSettings.checkIn.end)}
-                    onChange={(e) => handleTimeChange('checkInEnd', e.target.value)}
+                    </div>
+                    <input
+                      type="time"
+                      value={formatTimeForDisplay(scheduleSettings.checkIn.end)}
+                      onChange={(e) => handleTimeChange('checkInEnd', e.target.value)}
                     className="w-full pl-12 pr-4 py-2.5 rounded-lg bg-gray-900/60 border border-blue-500/30 text-blue-100 text-center font-medium tracking-wider focus:ring-2 focus:ring-blue-400 focus:border-blue-400/70 hover:border-blue-400/50 transition-all duration-200"
                     style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
-                  />
+                    />
                   <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
                     <ArrowRight className="h-3.5 w-3.5 text-blue-400 drop-shadow-sm animate-pulse-slow" />
                   </div>
@@ -123,36 +123,36 @@ const ScheduleSettingsForm = ({
             </div>
             <div className="space-y-4 relative z-10">
               <div>
-                <label className="block text-sm font-medium text-blue-200 mb-2">Waktu Mulai</label>
+                  <label className="block text-sm font-medium text-blue-200 mb-2">Waktu Mulai</label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 w-10 flex items-center justify-center pointer-events-none bg-gradient-to-r from-blue-500/15 to-blue-500/5 border-r border-blue-500/20 rounded-l-lg">
                     <Clock className="h-4 w-4 text-blue-400 group-hover:text-blue-300 transition-colors drop-shadow-sm" />
-                  </div>
-                  <input
-                    type="time"
-                    value={formatTimeForDisplay(scheduleSettings.checkOut.start)}
-                    onChange={(e) => handleTimeChange('checkOutStart', e.target.value)}
+                    </div>
+                    <input
+                      type="time"
+                      value={formatTimeForDisplay(scheduleSettings.checkOut.start)}
+                      onChange={(e) => handleTimeChange('checkOutStart', e.target.value)}
                     className="w-full pl-12 pr-4 py-2.5 rounded-lg bg-gray-900/60 border border-blue-500/30 text-blue-100 text-center font-medium tracking-wider focus:ring-2 focus:ring-blue-400 focus:border-blue-400/70 hover:border-blue-400/50 transition-all duration-200"
                     style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
-                  />
+                    />
                   <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
                     <ArrowRight className="h-3.5 w-3.5 text-blue-400 drop-shadow-sm animate-pulse-slow" />
                   </div>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-blue-200 mb-2">Waktu Selesai</label>
+                  <label className="block text-sm font-medium text-blue-200 mb-2">Waktu Selesai</label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 w-10 flex items-center justify-center pointer-events-none bg-gradient-to-r from-blue-500/15 to-blue-500/5 border-r border-blue-500/20 rounded-l-lg">
                     <Clock className="h-4 w-4 text-blue-400 group-hover:text-blue-300 transition-colors drop-shadow-sm" />
-                  </div>
-                  <input
-                    type="time"
-                    value={formatTimeForDisplay(scheduleSettings.checkOut.end)}
-                    onChange={(e) => handleTimeChange('checkOutEnd', e.target.value)}
+                    </div>
+                    <input
+                      type="time"
+                      value={formatTimeForDisplay(scheduleSettings.checkOut.end)}
+                      onChange={(e) => handleTimeChange('checkOutEnd', e.target.value)}
                     className="w-full pl-12 pr-4 py-2.5 rounded-lg bg-gray-900/60 border border-blue-500/30 text-blue-100 text-center font-medium tracking-wider focus:ring-2 focus:ring-blue-400 focus:border-blue-400/70 hover:border-blue-400/50 transition-all duration-200"
                     style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
-                  />
+                    />
                   <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
                     <ArrowRight className="h-3.5 w-3.5 text-blue-400 drop-shadow-sm animate-pulse-slow" />
                   </div>
@@ -187,7 +187,7 @@ const ScheduleSettingsForm = ({
             <Save className="w-4 h-4 relative z-10" />
             <span className="relative z-10">{loading ? 'Menyimpan...' : 'Simpan Jadwal'}</span>
             <span className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 z-10 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300">
-              <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4" />
             </span>
           </button>
         </div>

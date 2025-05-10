@@ -16,7 +16,7 @@ export interface User {
   username: string;
   password?: string; // Optional karena password tidak selalu dikirim dari backend
   full_name: string;
-  role: 'admin' | 'employee';
+  role: 'admin' | 'user';
   created_at: string;
 }
 

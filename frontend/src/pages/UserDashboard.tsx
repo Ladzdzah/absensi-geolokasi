@@ -104,20 +104,23 @@ export default function UserDashboard() {
             <h2 className="text-xl font-semibold text-white">Lokasi Anda Saat Ini</h2>
           </div>
           <div className="p-6">
-            <LocationMap currentLocation={currentLocation} />
+            <LocationMap 
+              currentLocation={currentLocation} 
+              officeLocation={officeLocation}
+            />
             <LocationStatus
               currentLocation={currentLocation}
               isWithinOfficeRadius={() => true} // Replace with actual logic
             />
             <AttendanceButtons
-              canCheckIn={canCheckIn}
-              canCheckOut={canCheckOut}
+              canCheckIn={!!canCheckIn}
+              canCheckOut={!!canCheckOut}
               handleCheckIn={handleCheckIn}
               handleCheckOut={handleCheckOut}
               loading={loading}
-              isWithinOfficeRadius={() => true} // Replace with actual logic
-              isWithinCheckInTime={() => true} // Replace with actual logic
-              isWithinCheckOutTime={() => true} // Replace with actual logic
+              isWithinOfficeRadius={() => !!currentLocation} // Function returning boolean
+              isWithinCheckInTime={() => true} // Function returning boolean
+              isWithinCheckOutTime={() => true} // Function returning boolean
               currentLocation={currentLocation}
             />
           </div>
