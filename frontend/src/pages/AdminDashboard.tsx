@@ -7,36 +7,51 @@ import { Download, Calendar, ChevronLeft, ChevronRight, Check, User, Activity, C
 import * as XLSX from 'xlsx';
 import { getMonthName } from '../utils/attendanceUtils';
 
+/**
+ * AdminDashboard: Halaman utama untuk administrator.
+ * Menampilkan data kehadiran pegawai dan menyediakan fitur ekspor data.
+ */
 export default function AdminDashboard() {
+  // State untuk data kehadiran
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [dailyAttendance, setDailyAttendance] = useState<Attendance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [users, setUsers] = useState<any[]>([]);
+  
+  // State untuk filter dan navigasi
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'present' | 'late' | 'absent'>('all');
   const [selectedUser, setSelectedUser] = useState<string | 'all'>('all');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showFilters, setShowFilters] = useState(false);
+  
+  // State untuk pagination
   const [currentPage, setCurrentPage] = useState(0);
   const USERS_PER_PAGE = 2;
   const attendanceContainerRef = useRef<HTMLDivElement>(null);
   
+  // Mengambil data saat komponen dimuat
   useEffect(() => {
     fetchAttendance();
     fetchUsers();
   }, []);
 
+  // Memperbarui data harian saat user atau tanggal berubah
   useEffect(() => {
     if (users.length > 0 && attendance.length > 0) {
       generateDailyAttendanceData();
     }
   }, [users, attendance, selectedDate]);
 
+  // Reset halaman saat filter berubah
   useEffect(() => {
     setCurrentPage(0);
   }, [selectedUser, selectedStatus]);
 
+  /**
+   * Mengambil data kehadiran dari API
+   */
   const fetchAttendance = async () => {
     try {
       const data = await api.attendance.getAllAttendance();
@@ -48,10 +63,13 @@ export default function AdminDashboard() {
     }
   };
 
+  /**
+   * Mengambil data pengguna dari API
+   */
   const fetchUsers = async () => {
     try {
       const data = await api.users.getAll();
-      // Filter out users with admin role
+      // Menyaring pengguna non-admin
       const nonAdminUsers = data.filter((user: any) => user.role !== 'admin');
       setUsers(nonAdminUsers);
     } catch (error: any) {
@@ -59,31 +77,33 @@ export default function AdminDashboard() {
     }
   };
 
-  // Generate daily attendance data including absences
+  /**
+   * Menghasilkan data kehadiran harian termasuk data ketidakhadiran
+   */
   const generateDailyAttendanceData = () => {
     const daily: Attendance[] = [];
     
-    // Get attendance records for the selected date
+    // Mendapatkan rekaman kehadiran untuk tanggal yang dipilih
     const dayAttendance = attendance.filter(att => 
       isSameDay(parseISO(att.created_at), selectedDate)
     );
     
-    // Map users to mark attendance status (already filtered to non-admin in fetchUsers)
+    // Memetakan pengguna untuk menandai status kehadiran
     users.forEach(user => {
-      // Find if user has attendance for this day
+      // Mencari apakah pengguna memiliki kehadiran untuk hari ini
       const userAttendance = dayAttendance.find(att => att.user_id === user.id);
       
       if (userAttendance) {
-        // If has attendance, use the existing record
-        // Update status based on check-in and check-out times
+        // Jika memiliki kehadiran, gunakan rekaman yang ada
+        // Perbarui status berdasarkan check-in dan check-out
         if (userAttendance.check_in_time) {
-          userAttendance.status = 'present'; // Set as present if user checked in
+          userAttendance.status = 'present'; // Setel sebagai hadir jika user check-in
         } else if (!userAttendance.check_in_time && userAttendance.check_out_time) {
-          userAttendance.status = 'late'; // Set as late if only check-out without check-in
+          userAttendance.status = 'late'; // Setel sebagai terlambat jika hanya check-out tanpa check-in
         }
         daily.push(userAttendance);
       } else {
-        // If no attendance, create an absent record
+        // Jika tidak ada kehadiran, buat rekaman absen
         const absentRecord: Attendance = {
           id: `absent-${user.id}-${format(selectedDate, 'yyyy-MM-dd')}`,
           user_id: user.id,
@@ -107,15 +127,17 @@ export default function AdminDashboard() {
     setDailyAttendance(daily);
   };
 
-  // Get daily attendance with filters
+  /**
+   * Mendapatkan data kehadiran harian dengan filter
+   */
   const getDailyAttendances = () => {
     return dailyAttendance.filter(att => {
-      // Apply user filter
+      // Terapkan filter pengguna
       if (selectedUser !== 'all' && att.user_id !== selectedUser) {
         return false;
       }
       
-      // Apply status filter
+      // Terapkan filter status
       if (selectedStatus === 'present' && att.status !== 'present') {
         return false;
       }
@@ -132,40 +154,41 @@ export default function AdminDashboard() {
     });
   };
 
-  // Get monthly attendance with filters for Excel export
+  /**
+   * Mendapatkan data kehadiran bulanan dengan filter untuk ekspor Excel
+   */
   const getMonthlyAttendances = () => {
     const monthStart = startOfMonth(selectedMonth);
     const monthEnd = endOfMonth(selectedMonth);
     
-    // Start with regular attendance
+    // Mulai dengan kehadiran reguler
     let monthlyAttendances = attendance.filter(att => {
       const attDate = parseISO(att.created_at);
       return attDate >= monthStart && attDate <= monthEnd;
     });
     
-    // Update status for each attendance record based on check-in and check-out
+    // Perbarui status untuk setiap rekaman kehadiran berdasarkan check-in dan check-out
     monthlyAttendances.forEach(entry => {
       if (entry.check_in_time) {
-        entry.status = 'present'; // User checked in
+        entry.status = 'present'; // Pengguna check-in
       } else if (!entry.check_in_time && entry.check_out_time) {
-        entry.status = 'late'; // Only check-out without check-in
+        entry.status = 'late'; // Hanya check-out tanpa check-in
       }
     });
     
-    // Get all days in the month
+    // Dapatkan semua hari dalam bulan
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
     
-    // For each user, check if they have attendance for each day
-    // (users are already filtered to non-admin in fetchUsers)
+    // Untuk setiap pengguna, periksa apakah mereka memiliki kehadiran untuk setiap hari
     users.forEach(user => {
       daysInMonth.forEach(day => {
-        // Check if user has attendance for this day
+        // Periksa apakah pengguna memiliki kehadiran untuk hari ini
         const hasAttendance = attendance.some(att => 
           att.user_id === user.id && 
           isSameDay(parseISO(att.created_at), day)
         );
         
-        // If no attendance, create an absent record
+        // Jika tidak ada kehadiran, buat rekaman absen
         if (!hasAttendance) {
           const absentRecord: Attendance = {
             id: `absent-${user.id}-${format(day, 'yyyy-MM-dd')}`,
@@ -188,7 +211,7 @@ export default function AdminDashboard() {
       });
     });
     
-    // Apply filters and exclude admin attendances
+    // Terapkan filter dan kecualikan kehadiran admin
     if (selectedUser !== 'all') {
       monthlyAttendances = monthlyAttendances.filter(att => att.user_id === selectedUser);
     }
@@ -196,91 +219,24 @@ export default function AdminDashboard() {
     return monthlyAttendances;
   };
 
-  // Get export URL for Excel format
-  const getExportUrl = () => {
-    const startDate = startOfMonth(selectedMonth);
-    const endDate = endOfMonth(selectedMonth);
-    return `/api/reports/attendance?startDate=${format(startDate, 'yyyy-MM-dd')}&endDate=${format(endDate, 'yyyy-MM-dd')}&format=xlsx`;
-  };
-
-  // Month navigation for views
-  const prevMonth = () => {
-    setSelectedMonth(prev => subMonths(prev, 1));
-    setSelectedDate(prev => subMonths(prev, 1));
-  };
-
-  const nextMonth = () => {
-    setSelectedMonth(prev => addMonths(prev, 1));
-    setSelectedDate(prev => addMonths(prev, 1));
-  };
-
-  // Date navigation for daily view
-  const prevDay = () => {
-    setSelectedDate(prev => {
-      const newDate = new Date(prev);
-      newDate.setDate(newDate.getDate() - 1);
-      return newDate;
-    });
-  };
-
-  const nextDay = () => {
-    setSelectedDate(prev => {
-      const newDate = new Date(prev);
-      newDate.setDate(newDate.getDate() + 1);
-      return newDate;
-    });
-  };
-
-  // Get stats for the dashboard summary
-  const getStats = () => {
-    const dailyAttendances = getDailyAttendances();
-    
-    return {
-      daily: {
-        present: dailyAttendances.filter(att => att.status === 'present').length,
-        late: dailyAttendances.filter(att => att.status === 'late').length,
-        absent: dailyAttendances.filter(att => att.status === 'absent').length,
-        total: dailyAttendances.length,
-        uniqueUsers: new Set(dailyAttendances.map(att => att.user_id)).size
-      }
-    };
-  };
-
-  // Group attendance by user for card display
-  const groupAttendancesByUser = () => {
-    const dailyAttendances = getDailyAttendances();
-    const grouped = new Map();
-    
-    dailyAttendances.forEach(att => {
-      if (!grouped.has(att.user_id)) {
-        const user = users.find(u => u.id === att.user_id);
-        grouped.set(att.user_id, {
-          user: user || { full_name: 'Unknown User', id: att.user_id },
-          attendances: []
-        });
-      }
-      grouped.get(att.user_id).attendances.push(att);
-    });
-    
-    return Array.from(grouped.values());
-  };
-
-  // Export attendance data to Excel
+  /**
+   * Ekspor data kehadiran ke Excel
+   */
   const exportToExcel = () => {
     const monthlyAttendances = getMonthlyAttendances();
     const monthStart = startOfMonth(selectedMonth);
     const monthEnd = endOfMonth(selectedMonth);
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
     
-    // Sort users alphabetically
+    // Urutkan pengguna berdasarkan abjad
     const sortedUsers = [...users].sort((a, b) => 
       a.full_name.localeCompare(b.full_name)
     );
     
-    // Create workbook and worksheet
+    // Buat workbook dan worksheet
     const workbook = XLSX.utils.book_new();
     
-    // Create per-name summary sheet with explicit typing
+    // Buat lembar ringkasan berdasarkan nama dengan tipe eksplisit
     interface UserSummary {
       'Nama': string;
       'Hadir': number;
@@ -291,7 +247,7 @@ export default function AdminDashboard() {
     
     const rekapPerNama: UserSummary[] = [];
     
-    // Define user detail record type
+    // Tentukan tipe rekaman detail pengguna
     interface UserDetailRecord {
       'Tanggal': string;
       'Nama': string;
@@ -300,12 +256,12 @@ export default function AdminDashboard() {
       'Status': string;
     }
     
-    // Process data for each user
+    // Proses data untuk setiap pengguna
     sortedUsers.forEach(user => {
-      // Get all attendance records for this user in the selected month
+      // Dapatkan semua rekaman kehadiran untuk pengguna ini di bulan yang dipilih
       const userAttendances = monthlyAttendances.filter(att => att.user_id === user.id);
       
-      // Create summary row for this user
+      // Buat baris ringkasan untuk pengguna ini
       const userSummary: UserSummary = {
         'Nama': user.full_name,
         'Hadir': userAttendances.filter(att => att.status === 'present').length,
@@ -316,11 +272,11 @@ export default function AdminDashboard() {
       
       rekapPerNama.push(userSummary);
       
-      // Individual detailed attendance for this user
+      // Kehadiran detail individual untuk pengguna ini
       const userDetail: UserDetailRecord[] = [];
       
       daysInMonth.forEach(day => {
-        // Find attendance for this day
+        // Temukan kehadiran untuk hari ini
         const dayAttendance = userAttendances.find(att => 
           isSameDay(parseISO(att.created_at), day)
         );
@@ -349,11 +305,11 @@ export default function AdminDashboard() {
         userDetail.push(detailRecord);
       });
       
-      // Create individual sheet for each user with their detailed attendance
+      // Buat lembar individual untuk setiap pengguna dengan kehadiran detail mereka
       const userWs = XLSX.utils.json_to_sheet(userDetail);
       XLSX.utils.book_append_sheet(workbook, userWs, user.full_name.substring(0, 30));
       
-      // Set column widths
+      // Atur lebar kolom
       const userColumnWidths = [
         { wch: 12 },  // Tanggal
         { wch: 25 },  // Nama
@@ -364,11 +320,11 @@ export default function AdminDashboard() {
       userWs['!cols'] = userColumnWidths;
     });
     
-    // Create and add summary worksheet
+    // Buat dan tambahkan lembar ringkasan
     const summaryWs = XLSX.utils.json_to_sheet(rekapPerNama);
     XLSX.utils.book_append_sheet(workbook, summaryWs, 'Rekap Karyawan');
     
-    // Set column widths for summary sheet
+    // Atur lebar kolom untuk lembar ringkasan
     const summaryColumnWidths = [
       { wch: 25 },  // Nama
       { wch: 8 },   // Hadir
@@ -378,7 +334,7 @@ export default function AdminDashboard() {
     ];
     summaryWs['!cols'] = summaryColumnWidths;
     
-    // Also create a traditional chronological view as the first sheet
+    // Buat juga tampilan kronologis tradisional sebagai lembar pertama
     interface ChronologicalRecord {
       'Tanggal': string;
       'Nama Karyawan': string;
@@ -406,20 +362,20 @@ export default function AdminDashboard() {
       };
     });
     
-    // Sort by date then by name
+    // Urutkan berdasarkan tanggal kemudian berdasarkan nama
     chronologicalData.sort((a, b) => {
-      // First sort by date
+      // Pertama urutkan berdasarkan tanggal
       const dateComparison = a['Tanggal'].localeCompare(b['Tanggal']);
       if (dateComparison !== 0) return dateComparison;
       
-      // Then sort by name
+      // Kemudian urutkan berdasarkan nama
       return a['Nama Karyawan'].localeCompare(b['Nama Karyawan']);
     });
     
     const allDataWs = XLSX.utils.json_to_sheet(chronologicalData);
     XLSX.utils.book_append_sheet(workbook, allDataWs, 'Semua Data');
     
-    // Set column widths
+    // Atur lebar kolom
     const allDataColumnWidths = [
       { wch: 12 },  // Tanggal
       { wch: 25 },  // Nama Karyawan
@@ -429,12 +385,99 @@ export default function AdminDashboard() {
     ];
     allDataWs['!cols'] = allDataColumnWidths;
     
-    // Generate Excel file
+    // Hasilkan file Excel
     const monthYear = format(selectedMonth, 'MMMM_yyyy');
     XLSX.writeFile(workbook, `Rekap_Absensi_${monthYear}.xlsx`);
   };
 
-  // Get attendance status display
+  /**
+   * Mendapatkan URL ekspor untuk format Excel
+   */
+  const getExportUrl = () => {
+    const startDate = startOfMonth(selectedMonth);
+    const endDate = endOfMonth(selectedMonth);
+    return `/api/reports/attendance?startDate=${format(startDate, 'yyyy-MM-dd')}&endDate=${format(endDate, 'yyyy-MM-dd')}&format=xlsx`;
+  };
+
+  /**
+   * Navigasi ke bulan sebelumnya
+   */
+  const prevMonth = () => {
+    setSelectedMonth(prev => subMonths(prev, 1));
+    setSelectedDate(prev => subMonths(prev, 1));
+  };
+
+  /**
+   * Navigasi ke bulan berikutnya
+   */
+  const nextMonth = () => {
+    setSelectedMonth(prev => addMonths(prev, 1));
+    setSelectedDate(prev => addMonths(prev, 1));
+  };
+
+  /**
+   * Navigasi ke hari sebelumnya
+   */
+  const prevDay = () => {
+    setSelectedDate(prev => {
+      const newDate = new Date(prev);
+      newDate.setDate(newDate.getDate() - 1);
+      return newDate;
+    });
+  };
+
+  /**
+   * Navigasi ke hari berikutnya
+   */
+  const nextDay = () => {
+    setSelectedDate(prev => {
+      const newDate = new Date(prev);
+      newDate.setDate(newDate.getDate() + 1);
+      return newDate;
+    });
+  };
+
+  /**
+   * Mendapatkan statistik untuk ringkasan dashboard
+   */
+  const getStats = () => {
+    const dailyAttendances = getDailyAttendances();
+    
+    return {
+      daily: {
+        present: dailyAttendances.filter(att => att.status === 'present').length,
+        late: dailyAttendances.filter(att => att.status === 'late').length,
+        absent: dailyAttendances.filter(att => att.status === 'absent').length,
+        total: dailyAttendances.length,
+        uniqueUsers: new Set(dailyAttendances.map(att => att.user_id)).size
+      }
+    };
+  };
+
+  /**
+   * Mengelompokkan kehadiran berdasarkan pengguna untuk tampilan kartu
+   */
+  const groupAttendancesByUser = () => {
+    const dailyAttendances = getDailyAttendances();
+    const grouped = new Map();
+    
+    dailyAttendances.forEach(att => {
+      if (!grouped.has(att.user_id)) {
+        const user = users.find(u => u.id === att.user_id);
+        grouped.set(att.user_id, {
+          user: user || { full_name: 'Unknown User', id: att.user_id },
+          attendances: []
+        });
+      }
+      grouped.get(att.user_id).attendances.push(att);
+    });
+    
+    return Array.from(grouped.values());
+  };
+
+  /**
+   * Mendapatkan tampilan status kehadiran
+   */
   const getAttendanceStatusDisplay = (status: string) => {
     if (status === 'present') {
       return (
@@ -457,12 +500,14 @@ export default function AdminDashboard() {
     }
   };
 
-  // Get current page of users
+  /**
+   * Mendapatkan halaman pengguna saat ini
+   */
   const getPaginatedUsers = () => {
     const filteredAttendances = groupAttendancesByUser();
     const totalPages = Math.ceil(filteredAttendances.length / USERS_PER_PAGE);
     
-    // Ensure current page is within bounds
+    // Pastikan halaman saat ini berada dalam batas
     if (currentPage >= totalPages && totalPages > 0) {
       setCurrentPage(totalPages - 1);
       return filteredAttendances.slice(0, USERS_PER_PAGE);
@@ -472,29 +517,38 @@ export default function AdminDashboard() {
     return filteredAttendances.slice(start, start + USERS_PER_PAGE);
   };
 
+  /**
+   * Navigasi ke halaman berikutnya
+   */
   const goToNextPage = () => {
     const filteredAttendances = groupAttendancesByUser();
     const totalPages = Math.ceil(filteredAttendances.length / USERS_PER_PAGE);
     
     if (currentPage < totalPages - 1) {
       setCurrentPage(currentPage + 1);
-      // Scroll to top of attendance container on page change
+      // Gulir ke atas container kehadiran saat halaman berubah
       if (attendanceContainerRef.current) {
         attendanceContainerRef.current.scrollTop = 0;
       }
     }
   };
 
+  /**
+   * Navigasi ke halaman sebelumnya
+   */
   const goToPrevPage = () => {
     if (currentPage > 0) {
       setCurrentPage(currentPage - 1);
-      // Scroll to top of attendance container on page change
+      // Gulir ke atas container kehadiran saat halaman berubah
       if (attendanceContainerRef.current) {
         attendanceContainerRef.current.scrollTop = 0;
       }
     }
   };
 
+  /**
+   * Mendapatkan total halaman
+   */
   const getTotalPages = () => {
     const filteredAttendances = groupAttendancesByUser();
     return Math.ceil(filteredAttendances.length / USERS_PER_PAGE);
@@ -509,7 +563,7 @@ export default function AdminDashboard() {
       )}
 
       <div className="space-y-6">
-        {/* Stats Header */}
+        {/* Ringkasan Statistik */}
         <div className="bg-gray-800/80 sm:bg-gray-800/80 backdrop-blur-md sm:backdrop-blur-sm rounded-2xl sm:rounded-xl shadow-2xl sm:shadow-md overflow-hidden border-0 sm:border border-gray-700/50 relative before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-tr before:from-blue-500/20 before:via-indigo-500/10 before:to-purple-500/20 before:z-0 sm:before:hidden">
           <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4">
             <h2 className="text-lg font-medium text-white flex items-center">
@@ -553,7 +607,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Daily Attendance Records */}
+        {/* Tampilan Data Kehadiran Harian */}
         <div className="bg-gray-800/80 sm:bg-gray-800/80 backdrop-blur-md sm:backdrop-blur-sm rounded-2xl sm:rounded-xl shadow-2xl sm:shadow-md border-0 sm:border border-gray-700/50 overflow-hidden relative before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-tr before:from-blue-500/20 before:via-indigo-500/10 before:to-purple-500/20 before:z-0 sm:before:hidden">
           <div className="bg-gray-800/80 border-b border-gray-700/50 px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:flex-wrap items-center justify-between gap-2 sm:gap-3 relative z-10">
             <div className="flex items-center w-full sm:w-auto justify-between sm:justify-start">
@@ -561,7 +615,7 @@ export default function AdminDashboard() {
                 <button 
                   onClick={prevDay}
                   className="p-1 rounded-md text-gray-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors"
-                  aria-label="Previous day"
+                  aria-label="Hari sebelumnya"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </button>
@@ -573,7 +627,7 @@ export default function AdminDashboard() {
                 <button 
                   onClick={nextDay}
                   className="p-1 rounded-md text-gray-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors"
-                  aria-label="Next day"
+                  aria-label="Hari berikutnya"
                 >
                   <ChevronRight className="h-5 w-5" />
                 </button>
@@ -584,21 +638,20 @@ export default function AdminDashboard() {
                   onClick={() => setShowFilters(!showFilters)}
                   className="p-1.5 rounded-md text-blue-300 bg-blue-500/20 hover:bg-blue-500/30 transition-colors flex items-center"
                 >
-                  <Filter className="h-4 w-4 mr-1" />
                   <span className="text-xs">Filter</span>
                 </button>
                 
                 <button
                   onClick={exportToExcel}
                   className="p-1.5 rounded-md bg-blue-600/80 text-blue-100 hover:bg-blue-600 transition-colors"
-                  aria-label="Export to Excel"
+                  aria-label="Ekspor ke Excel"
                 >
                   <Download className="h-4 w-4" />
                 </button>
               </div>
             </div>
             
-            {/* Mobile filter panel */}
+            {/* Panel filter mobile */}
             {showFilters && (
               <div className="w-full py-2 sm:hidden bg-gray-800/90 rounded-md border border-gray-700/50 mt-2">
                 <div className="flex items-center justify-between px-3 mb-2">
@@ -618,7 +671,7 @@ export default function AdminDashboard() {
                       value={selectedUser}
                       onChange={(e) => setSelectedUser(e.target.value)}
                       className="w-full rounded-md border border-gray-600 bg-gray-700/60 text-xs text-gray-300 py-1.5 pl-2 pr-8 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                      aria-label="Filter by user"
+                      aria-label="Filter berdasarkan pengguna"
                     >
                       <option value="all">Semua Karyawan</option>
                       {users.map(user => (
@@ -666,13 +719,13 @@ export default function AdminDashboard() {
               </div>
             )}
             
-            {/* Desktop filters */}
+            {/* Filter desktop */}
             <div className="hidden sm:flex flex-wrap items-center gap-2">
               <select
                 value={selectedUser}
                 onChange={(e) => setSelectedUser(e.target.value)}
                 className="rounded-md border border-gray-600 bg-gray-700/60 text-sm text-gray-300 py-1 pl-2 pr-8 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                aria-label="Filter by user"
+                aria-label="Filter berdasarkan pengguna"
               >
                 <option value="all">Semua Karyawan</option>
                 {users.map(user => (
@@ -684,7 +737,7 @@ export default function AdminDashboard() {
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value as 'all' | 'present' | 'late' | 'absent')}
                 className="rounded-md border border-gray-600 bg-gray-700/60 text-sm text-gray-300 py-1 pl-2 pr-8 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                aria-label="Filter by status"
+                aria-label="Filter berdasarkan status"
               >
                 <option value="all">Semua Status</option>
                 <option value="present">Hadir</option>
@@ -695,7 +748,7 @@ export default function AdminDashboard() {
               <button
                 onClick={exportToExcel}
                 className="inline-flex items-center px-3 py-1 text-sm font-medium rounded-md text-blue-100 bg-blue-600/80 hover:bg-blue-600 transition-colors"
-                aria-label="Export to Excel"
+                aria-label="Ekspor ke Excel"
               >
                 <Download className="h-4 w-4 mr-1" />
                 Ekspor Excel Bulanan
@@ -703,7 +756,7 @@ export default function AdminDashboard() {
             </div>
           </div>
           
-          {/* Attendance display - with improved pagination */}
+          {/* Tampilan kehadiran - dengan pagination yang ditingkatkan */}
           <div className="p-4" ref={attendanceContainerRef}>
             {loading ? (
               <div className="flex justify-center py-8">
@@ -759,7 +812,7 @@ export default function AdminDashboard() {
                       ))}
                     </div>
                     
-                    {/* Enhanced Pagination controls for better mobile experience */}
+                    {/* Kontrol pagination untuk pengalaman mobile yang lebih baik */}
                     {getTotalPages() > 1 && (
                       <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-gray-700/50">
                         <div className="text-xs text-gray-400 text-center sm:text-left w-full sm:w-auto order-2 sm:order-1">
@@ -775,7 +828,7 @@ export default function AdminDashboard() {
                                 ? 'bg-gray-800/30 text-gray-600 cursor-not-allowed' 
                                 : 'bg-gray-800 text-blue-300 hover:bg-gray-700 hover:text-blue-200'
                             }`}
-                            aria-label="Previous page"
+                            aria-label="Halaman sebelumnya"
                           >
                             <ArrowLeft className="h-5 w-5" />
                           </button>
@@ -792,7 +845,7 @@ export default function AdminDashboard() {
                                 ? 'bg-gray-800/30 text-gray-600 cursor-not-allowed'
                                 : 'bg-gray-800 text-blue-300 hover:bg-gray-700 hover:text-blue-200'
                             }`}
-                            aria-label="Next page"
+                            aria-label="Halaman berikutnya"
                           >
                             <ArrowRight className="h-5 w-5" />
                           </button>
@@ -800,7 +853,7 @@ export default function AdminDashboard() {
                       </div>
                     )}
                     
-                    {/* Mobile swipe indicator */}
+                    {/* Indikator geser mobile */}
                     {getTotalPages() > 1 && (
                       <div className="sm:hidden flex items-center justify-center mt-1">
                         <div className="flex space-x-1">

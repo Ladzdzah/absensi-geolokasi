@@ -1,6 +1,6 @@
 import React from 'react';
-import { Calendar, Clock, AlertCircle, Save, Info, ArrowRight } from 'lucide-react';
-import { ATTENDANCE_RULES } from '../../../constants';
+import {Clock, AlertCircle, Save, Info, ArrowRight } from 'lucide-react';
+
 
 interface ScheduleSettingsFormProps {
   scheduleSettings: {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Key, User, Lock, Eye, EyeOff, CheckCircle, XCircle, Check } from 'lucide-react';
+import { Key, User, Lock, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
 import { api } from '../../../services/api';
 
 // Add Notification interface

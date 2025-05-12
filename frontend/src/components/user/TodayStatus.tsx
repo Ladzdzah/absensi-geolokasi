@@ -2,19 +2,29 @@ import React from 'react';
 import { CheckCircle, Clock, LogIn, LogOut } from 'lucide-react';
 import { Attendance } from '../../types';
 
+/**
+ * Interface untuk properti komponen status hari ini
+ */
 interface TodayStatusProps {
-  attendance: Attendance[];
+  attendance: Attendance[];  // Data kehadiran pengguna
 }
 
+/**
+ * Komponen untuk menampilkan status kehadiran hari ini
+ * termasuk waktu check-in dan check-out
+ */
 const TodayStatus: React.FC<TodayStatusProps> = ({ attendance }) => {
+  // Mendapatkan tanggal hari ini dalam format ISO
   const today = new Date().toISOString().split('T')[0];
+  
+  // Mencari data kehadiran untuk hari ini
   const todayAttendance = attendance.find(
     (record) => record.check_in_time && record.check_in_time.startsWith(today)
   );
 
   return (
     <div className="bg-gray-800/80 sm:bg-gray-800/80 backdrop-blur-md sm:backdrop-blur-sm rounded-2xl sm:rounded-xl shadow-2xl sm:shadow-lg overflow-hidden border-0 sm:border border-gray-700/50 relative before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-tr before:from-blue-500/20 before:via-indigo-500/10 before:to-purple-500/20 before:z-0 sm:before:hidden">
-      {/* Header */}
+      {/* Header Komponen */}
       <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-700/50">
         <div className="flex items-center space-x-2">
           <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
@@ -22,11 +32,11 @@ const TodayStatus: React.FC<TodayStatusProps> = ({ attendance }) => {
         </div>
       </div>
 
-      {/* Content */}
+      {/* Konten Komponen */}
       <div className="p-3 sm:p-6">
         {todayAttendance ? (
           <div className="space-y-3 sm:space-y-4">
-            {/* Check In Time */}
+            {/* Waktu Check-In */}
             <div className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-700/30 rounded-lg">
               <div className="flex items-center space-x-2 sm:space-x-3">
                 <div className="p-1.5 sm:p-2 bg-green-500/10 rounded-lg">
@@ -42,7 +52,7 @@ const TodayStatus: React.FC<TodayStatusProps> = ({ attendance }) => {
               </span>
             </div>
 
-            {/* Check Out Time */}
+            {/* Waktu Check-Out */}
             <div className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-700/30 rounded-lg">
               <div className="flex items-center space-x-2 sm:space-x-3">
                 <div className="p-1.5 sm:p-2 bg-blue-500/10 rounded-lg">

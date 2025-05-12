@@ -4,7 +4,9 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapPin } from 'lucide-react';
 
-// Fix Leaflet marker icon issue
+/**
+ * Memperbaiki masalah ikon default Leaflet
+ */
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
@@ -12,6 +14,9 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
 });
 
+/**
+ * Ikon untuk marker pengguna (biru)
+ */
 const userIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -21,6 +26,9 @@ const userIcon = new L.Icon({
   shadowSize: [41, 41],
 });
 
+/**
+ * Ikon untuk marker kantor (merah)
+ */
 const officeIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -30,7 +38,9 @@ const officeIcon = new L.Icon({
   shadowSize: [41, 41],
 });
 
-// LocationMarker component with auto-centering
+/**
+ * Komponen untuk menampilkan marker pada peta dengan popup informasi
+ */
 const LocationMarker: React.FC<{ 
   position: [number, number]; 
   icon: L.Icon;
@@ -43,7 +53,9 @@ const LocationMarker: React.FC<{
   );
 };
 
-// MapCenterer component to handle map centering
+/**
+ * Komponen untuk mengatur pusat peta secara otomatis
+ */
 const MapCenterer: React.FC<{ position: [number, number] }> = ({ position }) => {
   const map = useMap();
   
@@ -54,24 +66,33 @@ const MapCenterer: React.FC<{ position: [number, number] }> = ({ position }) => 
   return null;
 };
 
+/**
+ * Interface untuk properti komponen peta lokasi
+ */
 interface LocationMapProps {
-  currentLocation: GeolocationPosition | null;
-  officeLocation: {
+  currentLocation: GeolocationPosition | null;  // Lokasi pengguna saat ini
+  officeLocation: {                             // Lokasi dan radius kantor
     lat: number;
     lng: number;
     radius: number;
   };
 }
 
+/**
+ * Komponen untuk menampilkan peta dengan lokasi pengguna dan kantor
+ * beserta radius area kantor
+ */
 const LocationMap: React.FC<LocationMapProps> = ({ currentLocation, officeLocation }) => {
+  // Mengubah data lokasi pengguna ke format yang dibutuhkan Leaflet
   const userPosition: [number, number] | null = currentLocation 
     ? [currentLocation.coords.latitude, currentLocation.coords.longitude] 
     : null;
   
+  // Mengubah data lokasi kantor ke format yang dibutuhkan Leaflet
   const officePosition: [number, number] = [officeLocation.lat, officeLocation.lng];
   const showOfficeLocation = officeLocation.lat !== 0 && officeLocation.lng !== 0;
   
-  // Determine map center and zoom
+  // Menentukan pusat dan zoom peta
   const mapCenter = userPosition || (showOfficeLocation ? officePosition : [0, 0]);
   const mapZoom = userPosition || showOfficeLocation ? 15 : 2;
   
@@ -86,15 +107,16 @@ const LocationMap: React.FC<LocationMapProps> = ({ currentLocation, officeLocati
           zoomControl={true}
           dragging={true}
         >
+          {/* Layer peta dasar dari OpenStreetMap */}
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
           
-          {/* Center the map on the user's location */}
+          {/* Pusatkan peta pada lokasi pengguna */}
           {userPosition && <MapCenterer position={userPosition} />}
           
-          {/* Display user marker */}
+          {/* Tampilkan marker pengguna */}
           {userPosition && (
             <LocationMarker 
               position={userPosition} 
@@ -111,7 +133,7 @@ const LocationMap: React.FC<LocationMapProps> = ({ currentLocation, officeLocati
             />
           )}
           
-          {/* Display office marker and radius */}
+          {/* Tampilkan marker kantor dan radius */}
           {showOfficeLocation && (
             <>
               <LocationMarker 
