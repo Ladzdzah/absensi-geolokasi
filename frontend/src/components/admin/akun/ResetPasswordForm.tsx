@@ -90,12 +90,12 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({
   return (
     <>
       <div className="bg-gray-800/50 rounded-lg border border-gray-700/50 overflow-hidden hover:border-red-500/30 transition-colors duration-300">
-        <div className="px-6 py-4 border-b border-gray-700/50 flex items-center bg-gray-900/50">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-700/50 flex items-center bg-gray-900/50">
           <Key className="w-5 h-5 text-red-500 mr-2" />
           <h2 className="text-lg font-medium text-gray-100">Reset Password</h2>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-3 sm:p-6 space-y-3 sm:space-y-4">
           {/* Username Select */}
           <div className="relative group">
             <select
@@ -175,8 +175,8 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading || (notification && notification.type === 'success')}
-            className="w-full h-11 bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:hover:bg-red-500
+            disabled={loading || !!(notification && notification.type === 'success')}
+            className="w-full h-12 sm:h-11 bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:hover:bg-red-500
                      text-white rounded-lg font-medium transition-colors duration-200 flex items-center justify-center"
           >
             {loading ? (

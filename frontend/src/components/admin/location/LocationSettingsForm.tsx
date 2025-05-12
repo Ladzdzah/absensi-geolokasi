@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Save, Check, AlertCircle } from 'lucide-react';
+import { MapPin, Save, Check, AlertCircle, Compass, Loader } from 'lucide-react';
 import { MapContainer, TileLayer, Circle, Marker, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -69,6 +69,8 @@ export const LocationSettingsForm: React.FC<LocationSettingsFormProps> = ({
     radius: locationSettings.radius
   });
   const [noChangesMessage, setNoChangesMessage] = useState('');
+  const [gettingLocation, setGettingLocation] = useState(false);
+  const [locationError, setLocationError] = useState('');
 
   // Check if location settings have been changed
   const hasLocationChanged = () => {
@@ -76,6 +78,55 @@ export const LocationSettingsForm: React.FC<LocationSettingsFormProps> = ({
       originalSettings.latitude !== locationSettings.latitude ||
       originalSettings.longitude !== locationSettings.longitude ||
       originalSettings.radius !== locationSettings.radius
+    );
+  };
+
+  // Function to get current device location
+  const getCurrentLocation = () => {
+    setGettingLocation(true);
+    setLocationError('');
+
+    if (!navigator.geolocation) {
+      setLocationError('Geolokasi tidak didukung oleh browser ini');
+      setGettingLocation(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setLocationSettings({
+          ...locationSettings,
+          latitude,
+          longitude
+        });
+        setGettingLocation(false);
+      },
+      (error) => {
+        let errorMessage = 'Gagal mendapatkan lokasi';
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Izin akses lokasi ditolak. Mohon izinkan akses lokasi pada browser Anda.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Informasi lokasi tidak tersedia saat ini. Silakan coba lagi nanti.';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Waktu permintaan lokasi habis. Silakan coba lagi.';
+            break;
+          default:
+            errorMessage = `Terjadi kesalahan: ${error.message}`;
+        }
+        
+        setLocationError(errorMessage);
+        setGettingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
     );
   };
 
@@ -98,17 +149,33 @@ export const LocationSettingsForm: React.FC<LocationSettingsFormProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="bg-gray-800 rounded-xl shadow-md p-4 border border-gray-700">
-        <div className="flex items-center space-x-2 text-gray-300">
-          <MapPin className="w-5 h-5" />
-          <span className="text-sm">Klik pada peta atau geser penanda untuk menentukan lokasi.</span>
+      <div className="bg-gray-800/80 sm:bg-gray-800 rounded-2xl sm:rounded-xl shadow-2xl sm:shadow-md p-3 sm:p-4 border-0 sm:border border-gray-700 relative before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-tr before:from-blue-500/20 before:via-indigo-500/10 before:to-purple-500/20 before:z-0 sm:before:hidden">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2 text-gray-300">
+            <MapPin className="w-5 h-5" />
+            <span className="text-sm">Klik pada peta atau geser penanda untuk menentukan lokasi.</span>
+          </div>
         </div>
+        
+        {locationError && (
+          <div className="mt-3 text-sm text-red-300 bg-red-900/20 p-2 rounded border border-red-800/30">
+            <AlertCircle className="h-4 w-4 inline mr-1" />
+            {locationError}
+          </div>
+        )}
+        
+        {noChangesMessage && (
+          <div className="mt-3 text-sm text-yellow-300 bg-yellow-900/20 p-2 rounded border border-yellow-800/30">
+            <AlertCircle className="h-4 w-4 inline mr-1" />
+            {noChangesMessage}
+          </div>
+        )}
       </div>
 
-      <div className="bg-gray-800 rounded-xl shadow-md overflow-hidden border border-gray-700">
-        <div className="p-6">
+      <div className="bg-gray-800/80 sm:bg-gray-800 rounded-2xl sm:rounded-xl shadow-2xl sm:shadow-md overflow-hidden border-0 sm:border border-gray-700 relative before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-tr before:from-blue-500/20 before:via-indigo-500/10 before:to-purple-500/20 before:z-0 sm:before:hidden">
+        <div className="p-3 sm:p-6 relative z-10">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
               <div className="relative">
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Latitude
@@ -173,7 +240,7 @@ export const LocationSettingsForm: React.FC<LocationSettingsFormProps> = ({
               </div>
             </div>
 
-            <div className="relative h-[400px] rounded-lg overflow-hidden border border-gray-600">
+            <div className="relative h-[220px] xs:h-[260px] sm:h-[400px] rounded-xl overflow-hidden border border-gray-600 shadow-lg">
               {locationSettings.latitude !== 0 && locationSettings.longitude !== 0 ? (
                 <MapContainer
                   center={[locationSettings.latitude, locationSettings.longitude]}
@@ -244,11 +311,30 @@ export const LocationSettingsForm: React.FC<LocationSettingsFormProps> = ({
               )}
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-0 justify-between mt-4">
+              <button
+                type="button"
+                onClick={getCurrentLocation}
+                disabled={gettingLocation}
+                className="inline-flex items-center justify-center w-full sm:w-auto px-4 py-2 text-sm font-medium rounded-lg text-blue-100 bg-indigo-600/80 hover:bg-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {gettingLocation ? (
+                  <>
+                    <Loader className="w-5 h-5 mr-2 animate-spin" />
+                    Mendapatkan Lokasi...
+                  </>
+                ) : (
+                  <>
+                    <Compass className="w-5 h-5 mr-2" />
+                    Gunakan Lokasi Saat Ini
+                  </>
+                )}
+              </button>
+              
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition duration-200 flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-blue-600 text-white w-full sm:w-auto px-6 py-2 rounded-lg hover:bg-blue-700 transition duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Save className="w-5 h-5 mr-2" />
                 {loading ? 'Menyimpan...' : 'Simpan Lokasi'}

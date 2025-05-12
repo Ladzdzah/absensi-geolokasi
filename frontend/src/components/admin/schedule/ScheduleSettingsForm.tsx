@@ -61,10 +61,10 @@ const ScheduleSettingsForm = ({
           animation: pulseSlow 2s infinite ease-in-out;
         }
       `}</style>
-      <form onSubmit={handleScheduleUpdate} className="p-6 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <form onSubmit={handleScheduleUpdate} className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
           {/* Check-In Section */}
-          <div className="group bg-gradient-to-br from-gray-800/70 via-gray-800/50 to-gray-800/70 p-5 rounded-xl border border-blue-500/20 backdrop-blur-sm hover:border-blue-400/30 transition-colors relative overflow-hidden">
+          <div className="group bg-gradient-to-br from-gray-800/70 via-gray-800/50 to-gray-800/70 p-3 sm:p-5 rounded-2xl sm:rounded-xl border border-blue-500/20 shadow-xl sm:shadow-md backdrop-blur-sm hover:border-blue-400/30 transition-colors relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/15 transition-colors">
@@ -113,7 +113,7 @@ const ScheduleSettingsForm = ({
           </div>
 
           {/* Check-Out Section */}
-          <div className="group bg-gradient-to-br from-gray-800/70 via-gray-800/50 to-gray-800/70 p-5 rounded-xl border border-blue-500/20 backdrop-blur-sm hover:border-blue-400/30 transition-colors relative overflow-hidden">
+          <div className="group bg-gradient-to-br from-gray-800/70 via-gray-800/50 to-gray-800/70 p-3 sm:p-5 rounded-2xl sm:rounded-xl border border-blue-500/20 shadow-xl sm:shadow-md backdrop-blur-sm hover:border-blue-400/30 transition-colors relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/15 transition-colors">
@@ -164,20 +164,20 @@ const ScheduleSettingsForm = ({
 
         {/* Status Messages */}
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-red-900/30 border border-red-500/30 rounded-lg">
+          <div className="flex items-center gap-2 p-2 sm:p-3 bg-red-900/30 border border-red-500/30 rounded-lg">
             <AlertCircle className="w-4 h-4 text-red-400" />
             <p className="text-sm text-red-200">{error}</p>
           </div>
         )}
         {success && (
-          <div className="flex items-center gap-2 p-3 bg-green-900/30 border border-green-500/30 rounded-lg">
+          <div className="flex items-center gap-2 p-2 sm:p-3 bg-green-900/30 border border-green-500/30 rounded-lg">
             <Info className="w-4 h-4 text-emerald-400" />
             <p className="text-sm text-emerald-200">Jadwal berhasil diperbarui!</p>
           </div>
         )}
 
         {/* Submit Button */}
-        <div className="flex justify-end pt-4">
+        <div className="flex justify-end pt-2 sm:pt-4">
           <button
             type="submit"
             disabled={loading}

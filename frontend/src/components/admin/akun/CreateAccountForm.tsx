@@ -90,13 +90,13 @@ const CreateAccountForm: React.FC<CreateAccountFormProps> = ({
   return (
     <>
       <div className="bg-gray-800/50 rounded-lg border border-gray-700/50 overflow-hidden hover:border-blue-500/30 transition-colors duration-300">
-        <div className="px-6 py-4 border-b border-gray-700/50 flex items-center bg-gray-900/50">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-700/50 flex items-center bg-gray-900/50">
           <UserPlus className="w-5 h-5 text-blue-500 mr-2" />
           <h2 className="text-lg font-medium text-gray-100">Pembuatan Akun</h2>
         </div>
 
-        <form ref={formRef} onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="space-y-4">
+        <form ref={formRef} onSubmit={handleSubmit} className="p-3 sm:p-6 space-y-3 sm:space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div className="relative group">
               <input
                 type="text"

@@ -76,14 +76,15 @@ const LocationMap: React.FC<LocationMapProps> = ({ currentLocation, officeLocati
   const mapZoom = userPosition || showOfficeLocation ? 15 : 2;
   
   return (
-    <div className="h-[300px] rounded-lg overflow-hidden border border-gray-600 mb-4">
+    <div className="h-[250px] sm:h-[300px] rounded-xl overflow-hidden mb-4 touch-manipulation border-0 sm:border border-gray-600 shadow-lg sm:shadow-none bg-white/10 backdrop-blur-md relative before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-tr before:from-blue-500/30 before:via-indigo-500/20 before:to-purple-500/30 before:z-0 sm:before:hidden">
       {userPosition || showOfficeLocation ? (
         <MapContainer
           center={mapCenter}
           zoom={mapZoom}
-          style={{ height: '100%', width: '100%' }}
+          style={{ height: '100%', width: '100%', position: 'relative', zIndex: 1 }}
           scrollWheelZoom={false}
           zoomControl={true}
+          dragging={true}
         >
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

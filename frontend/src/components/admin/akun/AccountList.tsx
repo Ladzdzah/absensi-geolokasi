@@ -91,21 +91,21 @@ const AccountList: React.FC<AccountListProps> = ({ userList, onDeleteUser, loadi
           <h2 className="text-lg font-medium text-gray-100">Daftar Akun Aktif</h2>
         </div>
 
-        <div className="p-6">
-          <div className="overflow-x-auto">
-            <table className="w-full">
+        <div className="p-3 sm:p-6">
+          <div className="overflow-x-auto rounded-lg">
+            <table className="w-full min-w-[500px]">
               <thead>
                 <tr className="border-b border-gray-700/50">
-                  <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="pb-3 px-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Nama Lengkap
                   </th>
-                  <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="pb-3 px-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Username
                   </th>
-                  <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="pb-3 px-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Role
                   </th>
-                  <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="pb-3 px-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Aksi
                   </th>
                 </tr>
@@ -116,13 +116,13 @@ const AccountList: React.FC<AccountListProps> = ({ userList, onDeleteUser, loadi
                     key={user.id} 
                     className="group hover:bg-gray-700/20 transition-colors duration-200"
                   >
-                    <td className="py-3 text-sm text-gray-300">
+                    <td className="py-3 px-2 text-sm text-gray-300 max-w-[120px] truncate">
                       {user.full_name}
                     </td>
-                    <td className="py-3 text-sm text-gray-300">
+                    <td className="py-3 px-2 text-sm text-gray-300 max-w-[120px] truncate">
                       {user.username}
                     </td>
-                    <td className="py-3">
+                    <td className="py-3 px-2">
                       <span
                         className={`px-2 py-1 text-xs font-medium rounded-md inline-flex items-center ${
                           user.role === 'admin'
@@ -133,7 +133,7 @@ const AccountList: React.FC<AccountListProps> = ({ userList, onDeleteUser, loadi
                         {user.role}
                       </span>
                     </td>
-                    <td className="py-3">
+                    <td className="py-3 px-2">
                       <button
                         onClick={() => handleDeleteClick(user.id, user.username)}
                         disabled={loading || user.role === 'admin'}
@@ -151,7 +151,7 @@ const AccountList: React.FC<AccountListProps> = ({ userList, onDeleteUser, loadi
                 ))}
                 {userList.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="py-8 text-center text-gray-400">
+                    <td colSpan={4} className="py-6 text-center text-gray-400">
                       Tidak ada akun yang tersedia
                     </td>
                   </tr>

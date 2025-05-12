@@ -36,24 +36,26 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      {/* Increased z-index to 9999 to ensure it's above all other elements */}
-      <nav className="fixed top-0 left-0 right-0 bg-gray-800 text-white shadow-lg z-[9999]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+      {/* Navbar dengan efek glass, gradient, dan shadow di mobile */}
+      <nav className="fixed top-0 left-0 right-0 bg-gray-800 text-white shadow-lg z-[9999] border-b border-gray-700/40">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3">
           <div className="flex items-center justify-between">
             {/* Logo and Title */}
-            <div className="flex items-center space-x-3">
-              <img 
-                src="/images/logo-smk.png" 
-                alt="Logo SMK" 
-                className="h-11 w-auto"
-                onError={(e) => {
-                  const imgElement = e.currentTarget as HTMLImageElement;
-                  imgElement.style.display = 'none';
-                }}
-              />
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="rounded-full bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-500 p-0.5 sm:p-0">
+                <img 
+                  src="/images/logo-smk.png" 
+                  alt="Logo SMK" 
+                  className="h-10 w-10 sm:h-11 sm:w-auto rounded-full shadow-lg border-2 border-white/30 object-cover bg-white"
+                  onError={(e) => {
+                    const imgElement = e.currentTarget as HTMLImageElement;
+                    imgElement.style.display = 'none';
+                  }}
+                />
+              </div>
               <Link 
                 to="/admin" 
-                className="text-xl font-bold hover:text-blue-300 transition duration-200"
+                className="text-base sm:text-xl font-bold hover:text-blue-300 transition duration-200 drop-shadow-sm"
               >
                 Admin Dashboard
               </Link>
@@ -63,7 +65,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
             <div className="relative" ref={menuRef}>
               <button 
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="flex items-center space-x-2 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg transition duration-200"
+                className="flex items-center space-x-1 sm:space-x-2 bg-gray-700 hover:bg-gray-600 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg transition duration-200"
               >
                 <span>Menu</span>
                 <svg 
@@ -124,8 +126,8 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
         </div>
       </nav>
 
-      <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
-        <h2 className="text-2xl font-bold text-white mb-6">{title}</h2>
+      <main className="relative max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 pt-20 sm:pt-24">
+        <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">{title}</h2>
         {children}
       </main>
     </div>
