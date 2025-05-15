@@ -54,15 +54,40 @@ export default function AdminDashboard() {
    */
   const fetchAttendance = async () => {
     try {
-      const data = await api.attendance.getAllAttendance();
-      setAttendance(data);
+      setLoading(true);
+      const startDate = startOfMonth(selectedMonth);
+      const endDate = endOfMonth(selectedMonth);
+      
+      const data = await api.attendance.getAllAttendance({
+        startDate: format(startDate, 'yyyy-MM-dd'),
+        endDate: format(endDate, 'yyyy-MM-dd')
+      });
+
+      // Memproses data kehadiran dengan validasi tanggal
+      const processedData = data.map((att: any) => {
+        try {
+          return {
+            ...att,
+            created_at: att.check_in_time ? format(parseISO(att.check_in_time), 'yyyy-MM-dd\'T\'HH:mm:ss') : null,
+            check_in_time: att.check_in_time ? format(parseISO(att.check_in_time), 'yyyy-MM-dd\'T\'HH:mm:ss') : null,
+            check_out_time: att.check_out_time ? format(parseISO(att.check_out_time), 'yyyy-MM-dd\'T\'HH:mm:ss') : null,
+            status: att.status || (att.check_in_time ? 'present' : 'absent')
+          };
+        } catch (error) {
+          console.error('Error processing attendance data:', error, att);
+          return null;
+        }
+      }).filter(Boolean); // Remove null entries
+
+      setAttendance(processedData);
       
       // Regenerate daily attendance data setiap kali ada update
       if (users.length > 0) {
         generateDailyAttendanceData();
       }
     } catch (error: any) {
-      setError(error.message);
+      setError(error.message || 'Gagal mengambil data kehadiran');
+      console.error('Error fetching attendance:', error);
     } finally {
       setLoading(false);
     }
@@ -73,12 +98,23 @@ export default function AdminDashboard() {
    */
   const fetchUsers = async () => {
     try {
+      setLoading(true);
       const data = await api.users.getAll();
-      // Menyaring pengguna non-admin
-      const nonAdminUsers = data.filter((user: any) => user.role !== 'admin');
+      
+      // Menyaring dan memproses data pengguna
+      const nonAdminUsers = data.filter((user: any) => user.role !== 'admin').map((user: any) => ({
+        id: user.id,
+        full_name: user.full_name,
+        email: user.email,
+        role: user.role
+      }));
+      
       setUsers(nonAdminUsers);
     } catch (error: any) {
-      console.error("Error fetching users:", error);
+      setError(error.message || 'Gagal mengambil data pengguna');
+      console.error('Error fetching users:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -90,7 +126,6 @@ export default function AdminDashboard() {
     
     // Mendapatkan rekaman kehadiran untuk tanggal yang dipilih
     const dayAttendance = attendance.filter(att => {
-      // Add validation to check if created_at exists and is a valid date string
       if (!att.created_at) return false;
       try {
         return isSameDay(parseISO(att.created_at), selectedDate);
@@ -110,10 +145,12 @@ export default function AdminDashboard() {
         const updatedAttendance = { ...userAttendance };
         
         // Perbarui status berdasarkan check-in dan check-out
-        if (updatedAttendance.check_in_time) {
-          updatedAttendance.status = 'present'; // Setel sebagai hadir jika user check-in
+        if (updatedAttendance.check_in_time && updatedAttendance.check_out_time) {
+          updatedAttendance.status = 'present';
+        } else if (updatedAttendance.check_in_time) {
+          updatedAttendance.status = 'present'; // Sudah check-in tapi belum check-out
         } else if (!updatedAttendance.check_in_time && updatedAttendance.check_out_time) {
-          updatedAttendance.status = 'late'; // Setel sebagai terlambat jika hanya check-out tanpa check-in
+          updatedAttendance.status = 'late';
         }
 
         // Pastikan data user lengkap
@@ -213,6 +250,7 @@ export default function AdminDashboard() {
         // Periksa apakah pengguna memiliki kehadiran untuk hari ini
         const hasAttendance = attendance.some(att => 
           att.user_id === user.id && 
+          att.created_at &&
           isSameDay(parseISO(att.created_at), day)
         );
         
@@ -251,171 +289,112 @@ export default function AdminDashboard() {
    * Ekspor data kehadiran ke Excel
    */
   const exportToExcel = () => {
-    const monthlyAttendances = getMonthlyAttendances();
-    const monthStart = startOfMonth(selectedMonth);
-    const monthEnd = endOfMonth(selectedMonth);
-    const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-    
-    // Urutkan pengguna berdasarkan abjad
-    const sortedUsers = [...users].sort((a, b) => 
-      a.full_name.localeCompare(b.full_name)
-    );
-    
-    // Buat workbook dan worksheet
-    const workbook = XLSX.utils.book_new();
-    
-    // Buat lembar ringkasan berdasarkan nama dengan tipe eksplisit
-    interface UserSummary {
-      'Nama': string;
-      'Hadir': number;
-      'Terlambat': number;
-      'Tidak Hadir': number;
-      'Total Hari': number;
-    }
-    
-    const rekapPerNama: UserSummary[] = [];
-    
-    // Tentukan tipe rekaman detail pengguna
-    interface UserDetailRecord {
-      'Tanggal': string;
-      'Nama': string;
-      'Waktu Masuk': string;
-      'Waktu Keluar': string;
-      'Status': string;
-    }
-    
-    // Proses data untuk setiap pengguna
-    sortedUsers.forEach(user => {
-      // Dapatkan semua rekaman kehadiran untuk pengguna ini di bulan yang dipilih
-      const userAttendances = monthlyAttendances.filter(att => att.user_id === user.id);
+    try {
+      setLoading(true);
+      const monthlyAttendances = getMonthlyAttendances();
+      const monthStart = startOfMonth(selectedMonth);
+      const monthEnd = endOfMonth(selectedMonth);
+      const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
       
-      // Buat baris ringkasan untuk pengguna ini
-      const userSummary: UserSummary = {
-        'Nama': user.full_name,
-        'Hadir': userAttendances.filter(att => att.status === 'present').length,
-        'Terlambat': userAttendances.filter(att => att.status === 'late').length,
-        'Tidak Hadir': userAttendances.filter(att => att.status === 'absent').length,
-        'Total Hari': daysInMonth.length
-      };
+      // Urutkan pengguna berdasarkan abjad
+      const sortedUsers = [...users].sort((a, b) => 
+        a.full_name.localeCompare(b.full_name)
+      );
       
-      rekapPerNama.push(userSummary);
+      // Buat workbook dan worksheet
+      const workbook = XLSX.utils.book_new();
       
-      // Kehadiran detail individual untuk pengguna ini
-      const userDetail: UserDetailRecord[] = [];
-      
-      daysInMonth.forEach(day => {
-        // Temukan kehadiran untuk hari ini
-        const dayAttendance = userAttendances.find(att => 
-          isSameDay(parseISO(att.created_at), day)
-        );
+      // Buat lembar ringkasan berdasarkan nama
+      const rekapPerNama = sortedUsers.map(user => {
+        const userAttendances = monthlyAttendances.filter(att => att.user_id === user.id);
         
-        let status = 'Tidak Hadir';
-        if (dayAttendance) {
-          if (dayAttendance.status === 'present') {
-            status = 'Hadir';
-          } else if (dayAttendance.status === 'late') {
-            status = 'Terlambat';
-          }
-        }
-        
-        const detailRecord: UserDetailRecord = {
-          'Tanggal': format(day, 'dd/MM/yyyy'),
+        return {
           'Nama': user.full_name,
-          'Waktu Masuk': dayAttendance && dayAttendance.check_in_time 
-            ? format(parseISO(dayAttendance.check_in_time), 'HH:mm') 
-            : '-',
-          'Waktu Keluar': dayAttendance && dayAttendance.check_out_time 
-            ? format(parseISO(dayAttendance.check_out_time), 'HH:mm') 
-            : '-',
-          'Status': status
+          'Hadir': userAttendances.filter(att => att.status === 'present').length,
+          'Terlambat': userAttendances.filter(att => att.status === 'late').length,
+          'Tidak Hadir': userAttendances.filter(att => att.status === 'absent').length,
+          'Total Hari': daysInMonth.length
         };
+      });
+
+      // Buat lembar detail untuk setiap pengguna
+      sortedUsers.forEach(user => {
+        const userAttendances = monthlyAttendances.filter(att => att.user_id === user.id);
         
-        userDetail.push(detailRecord);
+        const userDetail = daysInMonth.map(day => {
+          const dayAttendance = userAttendances.find(att => 
+            att.created_at &&
+            isSameDay(parseISO(att.created_at), day)
+          );
+          
+          let status = 'Tidak Hadir';
+          if (dayAttendance) {
+            if (dayAttendance.status === 'present') {
+              status = 'Hadir';
+            } else if (dayAttendance.status === 'late') {
+              status = 'Terlambat';
+            }
+          }
+          
+          return {
+            'Tanggal': format(day, 'dd/MM/yyyy'),
+            'Nama': user.full_name,
+            'Waktu Masuk': dayAttendance?.check_in_time 
+              ? format(parseISO(dayAttendance.check_in_time), 'HH:mm') 
+              : '-',
+            'Waktu Keluar': dayAttendance?.check_out_time 
+              ? format(parseISO(dayAttendance.check_out_time), 'HH:mm') 
+              : '-',
+            'Status': status,
+            'Lokasi Masuk': dayAttendance?.check_in_latitude && dayAttendance?.check_in_longitude
+              ? `${dayAttendance.check_in_latitude}, ${dayAttendance.check_in_longitude}`
+              : '-',
+            'Lokasi Keluar': dayAttendance?.check_out_latitude && dayAttendance?.check_out_longitude
+              ? `${dayAttendance.check_out_latitude}, ${dayAttendance.check_out_longitude}`
+              : '-'
+          };
+        });
+        
+        // Buat worksheet untuk pengguna ini
+        const userWs = XLSX.utils.json_to_sheet(userDetail);
+        XLSX.utils.book_append_sheet(workbook, userWs, user.full_name.substring(0, 30));
+        
+        // Atur lebar kolom
+        const userColumnWidths = [
+          { wch: 12 },  // Tanggal
+          { wch: 25 },  // Nama
+          { wch: 12 },  // Waktu Masuk
+          { wch: 12 },  // Waktu Keluar
+          { wch: 12 },  // Status
+          { wch: 25 },  // Lokasi Masuk
+          { wch: 25 },  // Lokasi Keluar
+        ];
+        userWs['!cols'] = userColumnWidths;
       });
       
-      // Buat lembar individual untuk setiap pengguna dengan kehadiran detail mereka
-      const userWs = XLSX.utils.json_to_sheet(userDetail);
-      XLSX.utils.book_append_sheet(workbook, userWs, user.full_name.substring(0, 30));
+      // Buat dan tambahkan lembar ringkasan
+      const summaryWs = XLSX.utils.json_to_sheet(rekapPerNama);
+      XLSX.utils.book_append_sheet(workbook, summaryWs, 'Rekap Karyawan');
       
-      // Atur lebar kolom
-      const userColumnWidths = [
-        { wch: 12 },  // Tanggal
+      // Atur lebar kolom untuk lembar ringkasan
+      const summaryColumnWidths = [
         { wch: 25 },  // Nama
-        { wch: 12 },  // Waktu Masuk
-        { wch: 12 },  // Waktu Keluar
-        { wch: 12 },  // Status
+        { wch: 8 },   // Hadir
+        { wch: 12 },  // Terlambat
+        { wch: 12 },  // Tidak Hadir
+        { wch: 10 },  // Total Hari
       ];
-      userWs['!cols'] = userColumnWidths;
-    });
-    
-    // Buat dan tambahkan lembar ringkasan
-    const summaryWs = XLSX.utils.json_to_sheet(rekapPerNama);
-    XLSX.utils.book_append_sheet(workbook, summaryWs, 'Rekap Karyawan');
-    
-    // Atur lebar kolom untuk lembar ringkasan
-    const summaryColumnWidths = [
-      { wch: 25 },  // Nama
-      { wch: 8 },   // Hadir
-      { wch: 12 },  // Terlambat
-      { wch: 12 },  // Tidak Hadir
-      { wch: 10 },  // Total Hari
-    ];
-    summaryWs['!cols'] = summaryColumnWidths;
-    
-    // Buat juga tampilan kronologis tradisional sebagai lembar pertama
-    interface ChronologicalRecord {
-      'Tanggal': string;
-      'Nama Karyawan': string;
-      'Waktu Masuk': string;
-      'Waktu Keluar': string;
-      'Status': string;
+      summaryWs['!cols'] = summaryColumnWidths;
+      
+      // Hasilkan file Excel
+      const monthYear = format(selectedMonth, 'MMMM_yyyy');
+      XLSX.writeFile(workbook, `Rekap_Absensi_${monthYear}.xlsx`);
+    } catch (error) {
+      setError('Gagal mengekspor data ke Excel');
+      console.error('Error exporting to Excel:', error);
+    } finally {
+      setLoading(false);
     }
-    
-    const chronologicalData: ChronologicalRecord[] = monthlyAttendances.map(att => {
-      const userName = users.find(user => user.id === att.user_id)?.full_name || 'Unknown User';
-      
-      let status = 'Tidak Hadir';
-      if (att.status === 'present') {
-        status = 'Hadir';
-      } else if (att.status === 'late') {
-        status = 'Terlambat';
-      }
-      
-      return {
-        'Tanggal': format(parseISO(att.created_at), 'dd/MM/yyyy'),
-        'Nama Karyawan': userName,
-        'Waktu Masuk': att.check_in_time ? format(parseISO(att.check_in_time), 'HH:mm') : '-',
-        'Waktu Keluar': att.check_out_time ? format(parseISO(att.check_out_time), 'HH:mm') : '-',
-        'Status': status
-      };
-    });
-    
-    // Urutkan berdasarkan tanggal kemudian berdasarkan nama
-    chronologicalData.sort((a, b) => {
-      // Pertama urutkan berdasarkan tanggal
-      const dateComparison = a['Tanggal'].localeCompare(b['Tanggal']);
-      if (dateComparison !== 0) return dateComparison;
-      
-      // Kemudian urutkan berdasarkan nama
-      return a['Nama Karyawan'].localeCompare(b['Nama Karyawan']);
-    });
-    
-    const allDataWs = XLSX.utils.json_to_sheet(chronologicalData);
-    XLSX.utils.book_append_sheet(workbook, allDataWs, 'Semua Data');
-    
-    // Atur lebar kolom
-    const allDataColumnWidths = [
-      { wch: 12 },  // Tanggal
-      { wch: 25 },  // Nama Karyawan
-      { wch: 12 },  // Waktu Masuk
-      { wch: 12 },  // Waktu Keluar
-      { wch: 12 },  // Status
-    ];
-    allDataWs['!cols'] = allDataColumnWidths;
-    
-    // Hasilkan file Excel
-    const monthYear = format(selectedMonth, 'MMMM_yyyy');
-    XLSX.writeFile(workbook, `Rekap_Absensi_${monthYear}.xlsx`);
   };
 
   /**

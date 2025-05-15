@@ -163,36 +163,36 @@ export default function UserDashboard() {
       maximumAge: 5000      // 5 detik
     };
 
-    const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        setCurrentLocation(position);
-        setLocationError(null);
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          setCurrentLocation(position);
+          setLocationError(null);
         // Log sukses untuk debugging
         console.log('Lokasi berhasil didapatkan:', {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
           accuracy: position.coords.accuracy
         });
-      },
-      (error) => {
-        setLocationError(error);
-        let message = 'Error lokasi: ';
-        
-        switch(error.code) {
+        },
+        (error) => {
+          setLocationError(error);
+          let message = 'Error lokasi: ';
+          
+          switch(error.code) {
           case GeolocationPositionError.PERMISSION_DENIED:
             message += 'Akses lokasi ditolak. Mohon izinkan akses lokasi di pengaturan browser Anda.';
-            break;
+              break;
           case GeolocationPositionError.POSITION_UNAVAILABLE:
             message += 'Lokasi tidak tersedia. Pastikan GPS aktif dan Anda berada di area dengan sinyal yang baik.';
-            break;
+              break;
           case GeolocationPositionError.TIMEOUT:
             message += 'Waktu permintaan lokasi habis. Mohon coba lagi atau periksa koneksi internet Anda.';
-            break;
-          default:
-            message += error.message;
-        }
-        
-        setError(message);
+              break;
+            default:
+              message += error.message;
+          }
+          
+          setError(message);
         // Log error untuk debugging
         console.error('Geolocation error:', {
           code: error.code,
