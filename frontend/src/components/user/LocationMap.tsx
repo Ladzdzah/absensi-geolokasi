@@ -79,6 +79,44 @@ interface LocationMapProps {
 }
 
 /**
+ * Komponen panduan untuk mengaktifkan lokasi
+ */
+const LocationGuide: React.FC = () => {
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  return (
+    <div className="flex items-center justify-center h-full bg-gray-800/80 text-gray-300 p-4">
+      <div className="text-center max-w-sm">
+        <MapPin className="w-8 h-8 mx-auto mb-3 text-blue-400" />
+        <h3 className="text-lg font-medium mb-2">Aktifkan Lokasi</h3>
+        {isMobile ? (
+          <div className="text-sm space-y-2">
+            <p>Untuk mengaktifkan lokasi di perangkat mobile:</p>
+            <ol className="text-left space-y-1 text-gray-400">
+              <li>1. Buka Pengaturan perangkat Anda</li>
+              <li>2. Cari menu Privasi atau Lokasi</li>
+              <li>3. Pastikan Lokasi diaktifkan</li>
+              <li>4. Izinkan browser mengakses lokasi</li>
+              <li>5. Refresh halaman ini</li>
+            </ol>
+          </div>
+        ) : (
+          <div className="text-sm space-y-2">
+            <p>Untuk mengaktifkan lokasi di browser:</p>
+            <ol className="text-left space-y-1 text-gray-400">
+              <li>1. Klik ikon kunci/info di address bar</li>
+              <li>2. Cari pengaturan Lokasi</li>
+              <li>3. Pilih "Izinkan" atau "Allow"</li>
+              <li>4. Refresh halaman ini</li>
+            </ol>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/**
  * Komponen untuk menampilkan peta dengan lokasi pengguna dan kantor
  * beserta radius area kantor
  */
@@ -161,12 +199,7 @@ const LocationMap: React.FC<LocationMapProps> = ({ currentLocation, officeLocati
           )}
         </MapContainer>
       ) : (
-        <div className="flex items-center justify-center h-full bg-gray-700/50 text-gray-400">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-400 mx-auto mb-2"></div>
-            <p>Mendeteksi lokasi...</p>
-          </div>
-        </div>
+        <LocationGuide />
       )}
     </div>
   );

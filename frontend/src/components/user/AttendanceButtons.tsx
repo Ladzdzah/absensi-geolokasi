@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle, XCircle, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
 import { AttendanceSchedule } from '../../types';
 
 /**
@@ -16,6 +16,7 @@ interface AttendanceButtonsProps {
   isWithinCheckOutTime: () => boolean;  // Fungsi untuk memeriksa apakah berada dalam waktu check-out
   currentLocation: GeolocationPosition | null;  // Data lokasi saat ini
   scheduleTime?: AttendanceSchedule;    // Jadwal waktu absensi
+  hasCheckedInToday: boolean;
 }
 
 /**
@@ -32,72 +33,84 @@ const AttendanceButtons: React.FC<AttendanceButtonsProps> = ({
   isWithinCheckInTime,
   isWithinCheckOutTime,
   currentLocation,
-  scheduleTime
+  scheduleTime,
+  hasCheckedInToday
 }) => {
   /**
    * Mendapatkan pesan status untuk tombol
    */
   const getButtonMessage = () => {
-    if (!currentLocation) return "Menunggu lokasi...";
-    if (!isWithinOfficeRadius()) return "Di luar area kantor";
-    if (!isWithinCheckInTime() && canCheckIn) return "Di luar jam masuk kantor";
-    if (!isWithinCheckOutTime() && canCheckOut) return "Di luar jam pulang kantor";
-    return "";
+    if (!currentLocation) {
+      return {
+        text: "Menunggu lokasi...",
+        icon: <Clock className="w-4 h-4" />,
+        color: "text-yellow-400"
+      };
+    }
+    
+    if (!isWithinOfficeRadius()) {
+      return {
+        text: "Di luar area kantor",
+        icon: <AlertCircle className="w-4 h-4" />,
+        color: "text-red-400"
+      };
+    }
+    
+    return {
+      text: "",
+      icon: null,
+      color: ""
+    };
   };
+
+  const buttonMessage = getButtonMessage();
+
+  // Hanya cek lokasi untuk kedua tombol
+  const isButtonDisabled = !currentLocation || !isWithinOfficeRadius() || loading;
 
   return (
     <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-4">
-      {/* Tombol Absen Masuk */}
-      {canCheckIn && (
-        <div className="space-y-1 sm:space-y-2">
-          <button
-            onClick={handleCheckIn}
-            disabled={
-              loading || !currentLocation || !isWithinOfficeRadius() || !isWithinCheckInTime()
-            }
-            className={`w-full py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg flex items-center justify-center transition duration-200 ${
-              !currentLocation || !isWithinOfficeRadius() || !isWithinCheckInTime()
-                ? 'bg-gray-600 cursor-not-allowed'
-                : 'bg-green-600 hover:bg-green-700 active:bg-green-800'
-            } text-white text-sm sm:text-base`}
-          >
-            <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
-            {loading ? 'Memproses...' : 'Absen Masuk'}
-          </button>
-          {/* Pesan status untuk tombol masuk */}
-          {(!isWithinCheckInTime() || !isWithinOfficeRadius()) && (
-            <p className="text-xs sm:text-sm text-gray-400 flex items-center justify-center">
-              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
-              {getButtonMessage()}
-            </p>
-          )}
+      {/* Status Message */}
+      {buttonMessage.text && (
+        <div className={`flex items-center justify-center gap-2 p-2 rounded-lg bg-gray-800/50 ${buttonMessage.color}`}>
+          {buttonMessage.icon}
+          <span className="text-sm">{buttonMessage.text}</span>
         </div>
       )}
 
-      {/* Tombol Absen Keluar */}
-      {canCheckOut && (
-        <div className="space-y-1 sm:space-y-2">
-          <button
-            onClick={handleCheckOut}
-            disabled={
-              loading || !currentLocation || !isWithinOfficeRadius() || !isWithinCheckOutTime()
-            }
-            className={`w-full py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg flex items-center justify-center transition duration-200 ${
-              !currentLocation || !isWithinOfficeRadius() || !isWithinCheckOutTime()
-                ? 'bg-gray-600 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
-            } text-white text-sm sm:text-base`}
-          >
-            <XCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
-            {loading ? 'Memproses...' : 'Absen Keluar'}
-          </button>
-          {/* Pesan status untuk tombol keluar */}
-          {(!isWithinCheckOutTime() || !isWithinOfficeRadius()) && (
-            <p className="text-xs sm:text-sm text-gray-400 flex items-center justify-center">
-              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
-              {getButtonMessage()}
-            </p>
-          )}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Check-in Button */}
+        <button
+          onClick={handleCheckIn}
+          disabled={isButtonDisabled}
+          className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200
+            ${!isButtonDisabled
+              ? 'bg-green-600 hover:bg-green-700 text-white'
+              : 'bg-gray-700/50 text-gray-400 cursor-not-allowed'}`}
+        >
+          <CheckCircle className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <span>Absen Masuk</span>
+        </button>
+
+        {/* Check-out Button */}
+        <button
+          onClick={handleCheckOut}
+          disabled={isButtonDisabled}
+          className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200
+            ${!isButtonDisabled
+              ? 'bg-blue-600 hover:bg-blue-700 text-white'
+              : 'bg-gray-700/50 text-gray-400 cursor-not-allowed'}`}
+        >
+          <XCircle className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <span>Absen Pulang</span>
+        </button>
+      </div>
+
+      {scheduleTime && (
+        <div className="text-xs text-gray-400 text-center space-y-1">
+          <p className="text-yellow-500">*Jadwal hanya sebagai informasi</p>
+          <p>Jam Masuk: {scheduleTime.check_in_start.slice(0, 5)} - {scheduleTime.check_in_end.slice(0, 5)}</p>
+          <p>Jam Pulang: {scheduleTime.check_out_start.slice(0, 5)} - {scheduleTime.check_out_end.slice(0, 5)}</p>
         </div>
       )}
     </div>

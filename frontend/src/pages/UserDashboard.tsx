@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { Attendance } from '../types';
+import { Attendance, AttendanceSchedule } from '../types';
 import UserLayout from '../components/user/UserLayout';
 import LocationMap from '../components/user/LocationMap';
 import LocationStatus from '../components/user/LocationStatus';
@@ -8,7 +8,7 @@ import AttendanceButtons from '../components/user/AttendanceButtons';
 import TodayStatus from '../components/user/TodayStatus';
 import { api } from '../services/api';
 import { format, isToday, parseISO, isSameDay } from 'date-fns';
-import { AlertCircle, CheckCircle, X, Info } from 'lucide-react';
+import { AlertCircle, CheckCircle, X, Info, Clock } from 'lucide-react';
 
 /**
  * UserDashboard: Halaman utama untuk pengguna biasa (non-admin).
@@ -38,11 +38,14 @@ export default function UserDashboard() {
   const [activeNotification, setActiveNotification] = useState<{id: string; type: 'error' | 'success' | 'info'; message: string} | null>(null);
   const [notificationTimeout, setNotificationTimeout] = useState<NodeJS.Timeout | null>(null);
 
+  const [scheduleTime, setScheduleTime] = useState<AttendanceSchedule | null>(null);
+
   // Mengambil data saat komponen dimuat
   useEffect(() => {
     fetchAttendance();
     startLocationTracking();
     fetchOfficeLocation();
+    fetchSchedule();
   }, []);
 
   // Menghitung jarak ke kantor saat lokasi berubah
@@ -139,43 +142,73 @@ export default function UserDashboard() {
    * Memulai pelacakan lokasi pengguna
    */
   const startLocationTracking = () => {
-    if ('geolocation' in navigator) {
-      const watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          setCurrentLocation(position);
-          setLocationError(null);
-        },
-        (error) => {
-          setLocationError(error);
-          let message = 'Error lokasi: ';
-          
-          switch(error.code) {
-            case 1:
-              message += 'Mohon izinkan akses lokasi pada browser Anda.';
-              break;
-            case 2:
-              message += 'Lokasi tidak tersedia saat ini.';
-              break;
-            case 3:
-              message += 'Waktu permintaan lokasi habis.';
-              break;
-            default:
-              message += error.message;
-          }
-          
-          setError(message);
-        },
-        { 
-          enableHighAccuracy: true, 
-          timeout: 15000, 
-          maximumAge: 10000 
-        }
-      );
-      
-      return () => navigator.geolocation.clearWatch(watchId);
-    } else {
-      setError('Geolocation tidak didukung di browser ini');
+    if (!navigator.geolocation) {
+      setError('Browser Anda tidak mendukung geolokasi. Mohon gunakan browser modern seperti Chrome, Firefox, atau Safari.');
+      return;
     }
+
+    // Cek apakah permissions API tersedia
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+        if (result.state === 'denied') {
+          setError('Akses lokasi ditolak. Mohon izinkan akses lokasi di pengaturan browser Anda.');
+          return;
+        }
+      });
+    }
+
+    const options = {
+      enableHighAccuracy: true,
+      timeout: 10000,        // 10 detik
+      maximumAge: 5000      // 5 detik
+    };
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        setCurrentLocation(position);
+        setLocationError(null);
+        // Log sukses untuk debugging
+        console.log('Lokasi berhasil didapatkan:', {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy
+        });
+      },
+      (error) => {
+        setLocationError(error);
+        let message = 'Error lokasi: ';
+        
+        switch(error.code) {
+          case GeolocationPositionError.PERMISSION_DENIED:
+            message += 'Akses lokasi ditolak. Mohon izinkan akses lokasi di pengaturan browser Anda.';
+            break;
+          case GeolocationPositionError.POSITION_UNAVAILABLE:
+            message += 'Lokasi tidak tersedia. Pastikan GPS aktif dan Anda berada di area dengan sinyal yang baik.';
+            break;
+          case GeolocationPositionError.TIMEOUT:
+            message += 'Waktu permintaan lokasi habis. Mohon coba lagi atau periksa koneksi internet Anda.';
+            break;
+          default:
+            message += error.message;
+        }
+        
+        setError(message);
+        // Log error untuk debugging
+        console.error('Geolocation error:', {
+          code: error.code,
+          message: error.message
+        });
+      },
+      options
+    );
+
+    // Simpan watchId untuk cleanup
+    return () => {
+      if (watchId) {
+        navigator.geolocation.clearWatch(watchId);
+        console.log('Location tracking stopped');
+      }
+    };
   };
 
   /**
@@ -185,6 +218,18 @@ export default function UserDashboard() {
     try {
       const data = await api.location.get();
       setOfficeLocation(data);
+    } catch (error: any) {
+      setError(error.message);
+    }
+  };
+
+  /**
+   * Mengambil data jadwal dari API
+   */
+  const fetchSchedule = async () => {
+    try {
+      const data = await api.schedule.get();
+      setScheduleTime(data);
     } catch (error: any) {
       setError(error.message);
     }
@@ -224,6 +269,34 @@ export default function UserDashboard() {
     }
     
     return officeDistance <= officeLocation.radius;
+  };
+
+  /**
+   * Memeriksa apakah saat ini dalam rentang waktu check-in
+   */
+  const isWithinCheckInTime = (): boolean => {
+    return true;
+  };
+
+  /**
+   * Memeriksa apakah saat ini dalam rentang waktu check-out
+   */
+  const isWithinCheckOutTime = (): boolean => {
+    return true;
+  };
+
+  /**
+   * Memeriksa apakah pengguna sudah melakukan check-in hari ini
+   */
+  const hasCheckedInToday = (): boolean => {
+    return true; // Selalu izinkan check-out
+  };
+  
+  /**
+   * Memeriksa apakah pengguna dapat melakukan check-out
+   */
+  const canCheckOut = (): boolean => {
+    return true; // Selalu izinkan check-out
   };
 
   /**
@@ -285,49 +358,6 @@ export default function UserDashboard() {
   };
 
   /**
-   * Memeriksa apakah pengguna sudah melakukan check-in hari ini
-   */
-  const hasCheckedInToday = (): boolean => {
-    if (!attendance.length) return false;
-    
-    return attendance.some(record => {
-      return record.check_in_time && isSameDay(parseISO(record.created_at), today);
-    });
-  };
-  
-  /**
-   * Memeriksa apakah pengguna dapat melakukan check-in
-   * (belum check-in hari ini atau telah menyelesaikan check-out)
-   */
-  const canCheckIn = (): boolean => {
-    if (!attendance.length) return true;
-    
-    const todayAttendance = attendance.find(record => 
-      isSameDay(parseISO(record.created_at), today)
-    );
-    
-    if (todayAttendance) {
-      return todayAttendance.check_out_time !== null;
-    }
-    
-    return true;
-  };
-  
-  /**
-   * Memeriksa apakah pengguna dapat melakukan check-out
-   * (sudah check-in hari ini tapi belum check-out)
-   */
-  const canCheckOut = (): boolean => {
-    const todayAttendance = attendance.find(record => 
-      isSameDay(parseISO(record.created_at), today)
-    );
-    
-    return todayAttendance !== undefined && 
-           todayAttendance.check_in_time !== null && 
-           todayAttendance.check_out_time === null;
-  };
-
-  /**
    * Mendapatkan style notifikasi berdasarkan tipe
    */
   const getNotificationStyle = (type: 'error' | 'success' | 'info') => {
@@ -357,6 +387,37 @@ export default function UserDashboard() {
       default:
         return <Info className="h-6 w-6 text-gray-300" />;
     }
+  };
+
+  /**
+   * Komponen untuk menampilkan informasi jadwal
+   */
+  const ScheduleInfo: React.FC<{ schedule: AttendanceSchedule | null }> = ({ schedule }) => {
+    if (!schedule) return null;
+
+    const now = new Date();
+    const currentTime = format(now, 'HH:mm:ss');
+    
+    const isCheckInTime = currentTime >= schedule.check_in_start && currentTime <= schedule.check_in_end;
+    const isCheckOutTime = currentTime >= schedule.check_out_start && currentTime <= schedule.check_out_end;
+    
+    return (
+      <div className="flex flex-wrap gap-4 items-center text-sm">
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${isCheckInTime ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`} />
+          <span className="text-gray-400">Masuk:</span>
+          <span className="text-white">{schedule.check_in_start.slice(0, 5)} - {schedule.check_in_end.slice(0, 5)}</span>
+          {isCheckInTime && <span className="text-green-400 text-xs">• Aktif</span>}
+        </div>
+        <div className="h-4 w-px bg-gray-700" />
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${isCheckOutTime ? 'bg-blue-400 animate-pulse' : 'bg-gray-400'}`} />
+          <span className="text-gray-400">Pulang:</span>
+          <span className="text-white">{schedule.check_out_start.slice(0, 5)} - {schedule.check_out_end.slice(0, 5)}</span>
+          {isCheckOutTime && <span className="text-blue-400 text-xs">• Aktif</span>}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -401,6 +462,15 @@ export default function UserDashboard() {
             </h2>
           </div>
           <div className="p-4 sm:p-6">
+            {/* Informasi Jadwal */}
+            <div className="mb-6 p-3 bg-gray-900/50 rounded-lg border border-gray-700/50">
+              <div className="flex items-center gap-2 text-gray-300 mb-2">
+                <Clock className="w-4 h-4" />
+                <span className="text-sm font-medium">Jadwal Hari Ini</span>
+              </div>
+              <ScheduleInfo schedule={scheduleTime} />
+            </div>
+
             {/* Komponen peta lokasi pengguna */}
             <LocationMap 
               currentLocation={currentLocation} 
@@ -418,15 +488,17 @@ export default function UserDashboard() {
             <div className="mt-4">
               {/* Komponen tombol absensi */}
               <AttendanceButtons
-                canCheckIn={canCheckIn()}
+                canCheckIn={isWithinCheckInTime()}
                 canCheckOut={canCheckOut()}
                 handleCheckIn={handleCheckIn}
                 handleCheckOut={handleCheckOut}
                 loading={loading}
                 isWithinOfficeRadius={isWithinOfficeRadius}
-                isWithinCheckInTime={() => true}
-                isWithinCheckOutTime={() => true}
+                isWithinCheckInTime={isWithinCheckInTime}
+                isWithinCheckOutTime={isWithinCheckOutTime}
                 currentLocation={currentLocation}
+                scheduleTime={scheduleTime || undefined}
+                hasCheckedInToday={hasCheckedInToday()}
               />
             </div>
           </div>

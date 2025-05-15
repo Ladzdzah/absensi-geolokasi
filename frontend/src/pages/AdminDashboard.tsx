@@ -56,6 +56,11 @@ export default function AdminDashboard() {
     try {
       const data = await api.attendance.getAllAttendance();
       setAttendance(data);
+      
+      // Regenerate daily attendance data setiap kali ada update
+      if (users.length > 0) {
+        generateDailyAttendanceData();
+      }
     } catch (error: any) {
       setError(error.message);
     } finally {
@@ -84,9 +89,16 @@ export default function AdminDashboard() {
     const daily: Attendance[] = [];
     
     // Mendapatkan rekaman kehadiran untuk tanggal yang dipilih
-    const dayAttendance = attendance.filter(att => 
-      isSameDay(parseISO(att.created_at), selectedDate)
-    );
+    const dayAttendance = attendance.filter(att => {
+      // Add validation to check if created_at exists and is a valid date string
+      if (!att.created_at) return false;
+      try {
+        return isSameDay(parseISO(att.created_at), selectedDate);
+      } catch (error) {
+        console.error("Invalid date format for attendance:", att);
+        return false;
+      }
+    });
     
     // Memetakan pengguna untuk menandai status kehadiran
     users.forEach(user => {
@@ -95,13 +107,22 @@ export default function AdminDashboard() {
       
       if (userAttendance) {
         // Jika memiliki kehadiran, gunakan rekaman yang ada
+        const updatedAttendance = { ...userAttendance };
+        
         // Perbarui status berdasarkan check-in dan check-out
-        if (userAttendance.check_in_time) {
-          userAttendance.status = 'present'; // Setel sebagai hadir jika user check-in
-        } else if (!userAttendance.check_in_time && userAttendance.check_out_time) {
-          userAttendance.status = 'late'; // Setel sebagai terlambat jika hanya check-out tanpa check-in
+        if (updatedAttendance.check_in_time) {
+          updatedAttendance.status = 'present'; // Setel sebagai hadir jika user check-in
+        } else if (!updatedAttendance.check_in_time && updatedAttendance.check_out_time) {
+          updatedAttendance.status = 'late'; // Setel sebagai terlambat jika hanya check-out tanpa check-in
         }
-        daily.push(userAttendance);
+
+        // Pastikan data user lengkap
+        updatedAttendance.user = {
+          full_name: user.full_name,
+          username: user.email
+        };
+        
+        daily.push(updatedAttendance);
       } else {
         // Jika tidak ada kehadiran, buat rekaman absen
         const absentRecord: Attendance = {
@@ -163,8 +184,15 @@ export default function AdminDashboard() {
     
     // Mulai dengan kehadiran reguler
     let monthlyAttendances = attendance.filter(att => {
-      const attDate = parseISO(att.created_at);
-      return attDate >= monthStart && attDate <= monthEnd;
+      // Add validation to check if created_at exists and is a valid date string
+      if (!att.created_at) return false;
+      try {
+        const attDate = parseISO(att.created_at);
+        return attDate >= monthStart && attDate <= monthEnd;
+      } catch (error) {
+        console.error("Invalid date format for attendance:", att);
+        return false;
+      }
     });
     
     // Perbarui status untuk setiap rekaman kehadiran berdasarkan check-in dan check-out
